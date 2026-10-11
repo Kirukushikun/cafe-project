@@ -67,7 +67,7 @@
   const HOME = { cashier: 'cashier/pos.html', admin: 'admin/dashboard.html', kitchen: 'kitchen/display.html', inventory: 'inventory/ingredients.html' };
   const ROLE_NAME = { admin: 'Owner / Admin', cashier: 'Cashier', kitchen: 'Kitchen', inventory: 'Stock clerk' };
 
-  $('accts').innerHTML = BB_DATA.users.map(u => `
+  $('accts').innerHTML = BB_DATA.users.filter(u => u.active !== false).map(u => `
     <button type="button" class="acct" data-u="${u.username}" data-p="${u.password}">
       <span><b>${u.name}</b><small>${ROLE_NAME[u.role]}</small></span>
       <code>${u.username} / ${u.password}</code>
@@ -88,7 +88,7 @@
     e.preventDefault();
     const user = BB.staff.login($('username').value, $('password').value);
     if (!user) {
-      $('err').textContent = 'Wrong username or password. Use one of the demo accounts below.';
+      $('err').textContent = 'Wrong username or password, or the account is disabled. Use one of the demo accounts below.';
       $('err').hidden = false;
       return;
     }

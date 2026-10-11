@@ -30,7 +30,7 @@ body.staff { background: var(--bg); }
 
 /* Panels and tables */
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
-.panel-pad { padding: 16px; display: grid; gap: 12px; }
+.panel-pad { padding: 16px; display: grid; gap: 12px; align-content: start; }
 .panel h2 { font-size: 1.05rem; font-weight: 700; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .tbl-wrap { overflow-x: auto; }
@@ -109,6 +109,29 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .err-msg { color: var(--danger); font-size: .85rem; }
 .modal.wide { max-width: 720px; }
 .r { text-align: right; }
+
+/* Charts */
+.chart { position: relative; }
+.chart svg { display: block; overflow: visible; }
+.chart .grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.chart .base { stroke: var(--muted); stroke-width: 1; }
+.chart .axis { fill: var(--muted); font: 11px var(--mono); }
+.chart .bar path { fill: var(--accent); opacity: .55; transition: opacity .12s; }
+.chart .bar.hl path { opacity: 1; }
+.chart .bar.on path { opacity: 1; }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart-tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: .8rem; display: grid; gap: 1px; white-space: nowrap; transform: translateY(-100%); z-index: 2; }
+.chart-tip b { font-weight: 600; }
+.share-bar { display: flex; gap: 2px; height: 14px; border-radius: 4px; overflow: hidden; }
+.share-bar i { display: block; min-width: 2px; }
+.share-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: .86rem; }
+.share-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.share-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.share-legend small { color: var(--muted); font-family: var(--mono); font-size: .76rem; }
+.delta { font-size: .78rem; font-family: var(--mono); }
+.delta.up { color: var(--accent); }
+.delta.down { color: var(--danger); }
+.sample-note { font-size: .8rem; color: var(--caramel); background: var(--caramel-soft); border-radius: 8px; padding: 8px 12px; }
 
 @media (max-width: 900px) {
   .kpis { grid-template-columns: 1fr 1fr; }

@@ -17,11 +17,14 @@
       { id: 'wastage', label: 'Wastage & counts', href: '../inventory/wastage.html', built: true }
     ]},
     { group: 'Admin', roles: ['admin'], links: [
-      { id: 'dashboard', label: 'Dashboard', href: '../admin/dashboard.html' },
-      { id: 'menu', label: 'Menu', href: '../admin/menu.html' },
-      { id: 'reports', label: 'Reports', href: '../admin/reports.html' },
-      { id: 'users', label: 'Users', href: '../admin/users.html' },
-      { id: 'audit', label: 'Audit logs', href: '../admin/audit.html' }
+      { id: 'dashboard', label: 'Dashboard', href: '../admin/dashboard.html', built: true },
+      { id: 'reports', label: 'Reports', href: '../admin/reports.html', built: true },
+      { id: 'menu', label: 'Menu & prices', href: '../admin/menu.html', built: true },
+      { id: 'recipes', label: 'Recipes & costing', href: '../admin/recipes.html', built: true },
+      { id: 'promos', label: 'Promos & vouchers', href: '../admin/promos.html', built: true },
+      { id: 'loyalty', label: 'Loyalty', href: '../admin/loyalty.html', built: true },
+      { id: 'users', label: 'Users & roles', href: '../admin/users.html', built: true },
+      { id: 'audit', label: 'Audit logs', href: '../admin/audit.html', built: true }
     ]}
   ];
 
@@ -48,7 +51,8 @@
   function renderSide(user, active) {
     const side = document.getElementById('side');
     if (!side) return;
-    const groups = NAV.filter(g => g.roles.includes(user.role));
+    // Admin sees its own group first
+    const groups = NAV.filter(g => g.roles.includes(user.role)).sort((a, b) => (b.group === 'Admin') - (a.group === 'Admin'));
     side.innerHTML = `
       <a class="brand" href="../index.html"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite</span></a>
       ${groups.map(g => `

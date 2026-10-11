@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users &amp; Roles · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .matrix td, .matrix th { text-align: center; }
+    .matrix td:first-child, .matrix th:first-child { text-align: left; }
+    .yes { color: var(--accent); font-weight: 700; }
+    .no { color: var(--line); }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font: 700 .8rem var(--display); flex: none; }
+    .who { display: flex; gap: 10px; align-items: center; }
+    .checkline { display: flex; gap: 8px; align-items: center; font-size: .9rem; cursor: pointer; }
+    .checkline input { width: 18px; height: 18px; accent-color: var(--accent); }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Users &amp; roles</h1><div class="sub">Who can log in and which screens they can open</div></div>
+      <button class="btn btn-primary btn-sm" type="button" id="addBtn">+ Add user</button>
+    </header>
+    <div class="work-body">
+      <section class="panel">
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>User</th><th>Username</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>What each role can do</h2></div>
+        <div class="tbl-wrap"><table class="tbl matrix" id="matrix"></table></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="uBack" hidden>
+  <form class="modal" id="uForm" role="dialog" aria-modal="true" aria-labelledby="uTitle" novalidate>
+    <div class="modal-head"><h2 id="uTitle"></h2><button type="button" class="x-btn" data-close aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="lbl full">Full name<input class="input" id="uName" autocomplete="off"></label>
+        <label class="lbl">Username<input class="input" id="uUser" autocomplete="off" style="font-family:var(--mono)"></label>
+        <label class="lbl">Role<select class="input" id="uRole"></select></label>
+        <label class="lbl full"><span id="uPassLbl">Password</span><input class="input" id="uPass" type="text" autocomplete="off"><span class="hint">Demo only: passwords are stored as plain text in this mockup.</span></label>
+        <label class="checkline full"><input type="checkbox" id="uActive" checked> Can log in</label>
+      </div>
+      <p class="err-msg" id="uErr" hidden></p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button type="submit" class="btn btn-primary">Save user</button></div>
+  </form>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['admin'], 'users');
+  if (!user) return;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+  const ROLES = BBS.ROLE_NAME;
+
+  function lastLogin(u) {
+    const a = BB.audit.list().filter(x => x.action === 'Logged in' && x.user === u.name).pop();
+    return a ? BB.dateTime(a.at) : '<span class="muted">Never in this demo</span>';
+  }
+
+  function render() {
+    $('rows').innerHTML = D.users.map(u => `<tr>
+      <td><div class="who"><span class="avatar">${esc(u.name.split(' ').map(s => s[0]).slice(0, 2).join(''))}</span><span><b>${esc(u.name)}</b>${u.id === user.id ? '<small>You</small>' : ''}</span></div></td>
+      <td class="mono" style="font-size:.85rem">${esc(u.username)}</td>
+      <td>${ROLES[u.role]}</td>
+      <td><span class="chip ${u.active === false ? 'chip-red' : 'chip-green'}">${u.active === false ? 'Disabled' : 'Active'}</span></td>
+      <td>${lastLogin(u)}</td>
+      <td class="r"><button class="btn btn-ghost btn-sm" data-edit="${u.id}">Edit</button></td>
+    </tr>`).join('');
+
+    const perms = [
+      ['Take QR orders from customers', 1, 1, 0, 0],
+      ['Point of sale and taking payments', 1, 1, 0, 0],
+      ['Senior/PWD discounts, cancel and void orders', 1, 1, 0, 0],
+      ['Kitchen display, mark items sold out', 1, 0, 1, 0],
+      ['Ingredients, suppliers, purchase orders, wastage', 1, 0, 0, 1],
+      ['Dashboard and reports', 1, 0, 0, 0],
+      ['Menu, prices, recipes, promos, loyalty', 1, 0, 0, 0],
+      ['Users and audit logs', 1, 0, 0, 0]
+    ];
+    const count = (r) => D.users.filter(u => u.role === r && u.active !== false).length;
+    $('matrix').innerHTML = `<thead><tr><th>Can…</th>${['admin', 'cashier', 'kitchen', 'inventory'].map(r => `<th>${ROLES[r]}<small style="display:block;font-family:var(--body);text-transform:none;letter-spacing:0">${count(r)} active</small></th>`).join('')}</tr></thead>
+      <tbody>${perms.map(p => `<tr><td>${p[0]}</td>${p.slice(1).map(v => `<td>${v ? '<span class="yes" aria-label="Yes">✓</span>' : '<span class="no" aria-label="No">—</span>'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  }
+
+  let editing = null;
+  $('uRole').innerHTML = Object.keys(ROLES).map(r => `<option value="${r}">${ROLES[r]}</option>`).join('');
+  function openU(id) {
+    editing = id ? D.users.find(u => u.id === id) : null;
+    $('uTitle').textContent = editing ? 'Edit ' + editing.name : 'Add user';
+    $('uName').value = editing ? editing.name : '';
+    $('uUser').value = editing ? editing.username : '';
+    $('uRole').value = editing ? editing.role : 'cashier';
+    $('uPass').value = '';
+    $('uPassLbl').textContent = editing ? 'New password (leave blank to keep)' : 'Password';
+    $('uActive').checked = editing ? editing.active !== false : true;
+    const self = editing && editing.id === user.id;
+    $('uRole').disabled = self; $('uActive').disabled = self;
+    $('uErr').hidden = true;
+    $('uBack').hidden = false;
+    $('uName').focus();
+  }
+  $('addBtn').addEventListener('click', () => openU(null));
+  $('rows').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openU(b.dataset.edit); });
+
+  $('uForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = $('uName').value.trim(), username = $('uUser').value.trim().toLowerCase(), role = $('uRole').value, pass = $('uPass').value, active = $('uActive').checked;
+    let err = '';
+    if (!name) err = 'Enter the person’s full name.';
+    else if (!/^[a-z0-9._]{3,20}$/.test(username)) err = 'Username: 3 to 20 lowercase letters, numbers, dots or underscores.';
+    else if (D.users.some(u => u.username === username && u !== editing)) err = `${username} is already taken.`;
+    else if (!editing && pass.length < 6) err = 'Password must be at least 6 characters.';
+    else if (editing && pass && pass.length < 6) err = 'New password must be at least 6 characters.';
+    else if (editing && editing.role === 'admin' && (role !== 'admin' || !active) && D.users.filter(u => u.role === 'admin' && u.active !== false).length < 2) err = 'Keep at least one active admin.';
+    if (err) { $('uErr').textContent = err; $('uErr').hidden = false; return; }
+
+    let list;
+    if (editing) {
+      list = D.users.map(u => u.id !== editing.id ? u : Object.assign({}, u, { name, username, role: editing.id === user.id ? u.role : role, active: editing.id === user.id ? true : active }, pass ? { password: pass } : {}));
+      const changes = [];
+      if (editing.role !== role && editing.id !== user.id) changes.push(`role ${ROLES[editing.role]} → ${ROLES[role]}`);
+      if ((editing.active !== false) !== active && editing.id !== user.id) changes.push(active ? 'enabled' : 'disabled');
+      if (pass) changes.push('password reset');
+      BB.audit.log('Edited user', `${name}${changes.length ? ' · ' + changes.join(', ') : ''}`);
+    } else {
+      list = D.users.concat({ id: 'u' + Date.now().toString(36), name, username, password: pass, role, active });
+      BB.audit.log('Added user', `${name} · ${ROLES[role]}`);
+    }
+    BB.admin.save('users', list);
+    $('uBack').hidden = true;
+    BBC.toast('Saved ' + name);
+    render();
+  });
+
+  document.querySelectorAll('.modal-back').forEach(back => {
+    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
+  render();
+})();
+</script>
+</body>
+</html>

@@ -332,6 +332,97 @@
     }
   };
 
+  // ---- Admin: save catalog changes (menu, recipes, vouchers, users, promo, loyalty settings) ----
+  const admin = {
+    save(key, value) {
+      const D = window.BB_DATA;
+      set(D.overrideKeys[key], value);
+      if (key === 'loyaltyConfig') Object.assign(D.loyalty, value);
+      else D[key] = value;
+    }
+  };
+
+  // ---- Sales history for the dashboard and reports ----
+  // Days before today are filled with generated sample sales (same numbers on every load,
+  // never saved) so the reports have something to show. Today and any real orders come from storage.
+  const history = {
+    _cache: null,
+    sample() {
+      if (history._cache) return history._cache;
+      const D = window.BB_DATA;
+      const rnd = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+      const pick = (r, weights) => { let x = r() * weights.reduce((a, b) => a + b[1], 0); for (const w of weights) { x -= w[1]; if (x <= 0) return w[0]; } return weights[0][0]; };
+      const popular = { latte: 9, spanish: 9, brownsugar: 8, matcha: 7, tapa: 6, americano: 6, macchiato: 5, wintermelon: 5, javachip: 4, adobo: 4, croissant: 4, okinawa: 4, mocha: 3, seasalt: 3, ube: 3, tocino: 3, fries: 3, choco: 2, strawberry: 2, cookies: 2, matchafrappe: 2, longganisa: 2, spam: 2, ensaymada: 2, pandesal: 2, clubhouse: 2, taro: 2 };
+      const itemWeights = D.items.map(i => [i, popular[i.id] || 1]);
+      const hours = [[7, 4], [8, 7], [9, 6], [10, 5], [11, 7], [12, 12], [13, 10], [14, 6], [15, 9], [16, 10], [17, 8], [18, 7], [19, 6], [20, 5], [21, 3]];
+      const out = [];
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      for (let d = 30; d >= 1; d--) {
+        const day = new Date(today.getTime() - d * 86400000);
+        const r = rnd(Number(ymd(day)));
+        const weekend = day.getDay() === 0 || day.getDay() === 6;
+        const count = Math.round((weekend ? 172 : 138) * (0.85 + r() * 0.3));
+        for (let n = 0; n < count; n++) {
+          const at = new Date(day.getTime() + pick(r, hours) * 3600000 + Math.floor(r() * 60) * 60000);
+          const lines = [];
+          const nLines = r() < 0.55 ? 1 : r() < 0.8 ? 2 : 3;
+          for (let k = 0; k < nLines; k++) {
+            const item = pick(r, itemWeights);
+            const options = [];
+            (item.options || []).forEach(g => {
+              if (g.type === 'single') {
+                const ch = g.id === 'size' ? g.choices[r() < 0.42 ? 1 : 0] : g.choices[Math.floor(r() * g.choices.length)];
+                options.push({ groupId: g.id, group: g.name, id: ch.id, name: ch.name, price: ch.price });
+              } else if (r() < 0.28) {
+                const ch = g.choices[Math.floor(r() * g.choices.length)];
+                options.push({ groupId: g.id, group: g.name, id: ch.id, name: ch.name, price: ch.price });
+              }
+            });
+            const unitPrice = item.price + options.reduce((a, o) => a + o.price, 0);
+            lines.push({ itemId: item.id, name: item.name, qty: r() < 0.1 ? 2 : 1, unitPrice, options });
+          }
+          const subtotal = lines.reduce((a, l) => a + l.unitPrice * l.qty, 0);
+          const type = pick(r, [['dine-in', 60], ['take-out', 32], ['delivery', 8]]);
+          const method = pick(r, [['GCASH', 55], ['CASH', 35], ['MAYA', 10]]);
+          let discount = 0, discountType = '';
+          const roll = r();
+          if (roll < 0.06) { discount = seniorDiscount(subtotal, 1, Math.max(1, nLines)); discountType = 'Senior/PWD'; }
+          else if (roll < 0.11 && subtotal >= 150) { discount = 20; discountType = 'Voucher'; }
+          const deliveryFee = type === 'delivery' ? D.delivery.fee : 0;
+          out.push({ sample: true, orderNo: 'SAMPLE', paidAt: at.toISOString(), createdAt: at.toISOString(), items: lines, subtotal: round2(subtotal), discount: round2(discount), discountType, deliveryFee, total: round2(subtotal - discount + deliveryFee), method, type, source: r() < 0.7 ? 'qr' : 'pos' });
+        }
+      }
+      history._cache = out;
+      return out;
+    },
+    // Paid, not voided orders in [from, to), normalized for reports
+    sales(from, to, includeSample) {
+      const real = orders.list().filter(o => o.paidAt && o.status !== 'voided').map(o => ({
+        sample: false, orderNo: o.orderNo, paidAt: o.paidAt, createdAt: o.createdAt, items: o.items, subtotal: o.subtotal,
+        discount: round2((o.voucher ? o.voucher.amount : 0) + (o.senior ? o.senior.amount : 0) + (o.pointsUsed || 0)),
+        discountType: o.senior ? 'Senior/PWD' : o.voucher ? 'Voucher' : o.pointsUsed ? 'Points' : '',
+        deliveryFee: o.deliveryFee || 0, total: o.total, method: o.method, type: o.type, source: o.source || 'qr'
+      }));
+      const all = (includeSample === false ? [] : history.sample()).concat(real);
+      return all.filter(o => { const t = new Date(o.paidAt); return t >= from && t < to; });
+    },
+    // Sample wastage (one or two entries a day) for days before today
+    sampleWastage() {
+      const out = [];
+      const perishable = [['milk', 500, 'Spoiled or expired'], ['croissant', 2, 'Spoiled or expired'], ['pearls', 300, 'Spoiled or expired'], ['beans', 36, 'Remade (wrong order)'], ['cream', 200, 'Spoiled or expired'], ['ensaymada', 1, 'Spoiled or expired'], ['oat', 240, 'Spilled or dropped'], ['egg', 2, 'Spilled or dropped']];
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      for (let d = 30; d >= 1; d--) {
+        const day = new Date(today.getTime() - d * 86400000);
+        const k = Number(ymd(day)) % perishable.length;
+        [perishable[k], perishable[(k + 3) % perishable.length]].slice(0, d % 3 === 0 ? 2 : 1).forEach(([ing, qty, reason], i) => {
+          const g = inventory.ing(ing);
+          if (g) out.push({ sample: true, at: new Date(day.getTime() + (20 + i) * 3600000).toISOString(), ing, qty: -qty, type: 'WASTAGE', note: reason, user: 'Sample data', cost: round2(qty * g.cost) });
+        });
+      }
+      return out;
+    }
+  };
+
   // ---- Senior citizen / PWD discount ----
   // The eligible share (subtotal × eligible ÷ diners) is made VAT-exempt, then 20% off.
   // seniorDiscount(245, 1, 1) -> 70  (245 ÷ 1.12 = 218.75, less 20% = 175)
@@ -357,7 +448,7 @@
   const staff = {
     current: () => get('staff', null),
     login(username, password) {
-      const u = (window.BB_DATA.users || []).find(x => x.username === username.trim().toLowerCase() && x.password === password);
+      const u = (window.BB_DATA.users || []).find(x => x.username === username.trim().toLowerCase() && x.password === password && x.active !== false);
       if (!u) return null;
       const s = { id: u.id, name: u.name, username: u.username, role: u.role, since: new Date().toISOString() };
       set('staff', s);
@@ -393,5 +484,5 @@
     voided: { label: 'Voided', chip: 'chip-red' }
   };
 
-  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory };
+  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory, admin, history };
 })();

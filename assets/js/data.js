@@ -255,4 +255,29 @@
     samplePOs,
     wasteReasons: ['Spoiled or expired', 'Spilled or dropped', 'Remade (wrong order)', 'Quality issue', 'Used for staff meal', 'Other']
   };
+
+  // Option-group templates the admin can attach to new menu items
+  window.BB_DATA.optionTemplates = {
+    coffee: { label: 'Coffee drink (hot/iced, size, coffee add-ons)', groups: [temp, size(20), coffeeAddons] },
+    icedcoffee: { label: 'Iced coffee (size, coffee add-ons)', groups: [size(20), coffeeAddons] },
+    drink: { label: 'Non-coffee drink (hot/iced, size, add-ons)', groups: [temp, size(20), drinkAddons] },
+    milktea: { label: 'Milk tea (size, sugar level, toppings)', groups: [size(20), sugar, teaAddons] },
+    frappe: { label: 'Frappe (size, add-ons)', groups: [size(25), drinkAddons] },
+    meal: { label: 'Rice meal (extra rice, egg, atchara)', groups: [mealAddons] },
+    none: { label: 'No options', groups: [] }
+  };
+
+  // Admin edits (menu, prices, recipes, vouchers, users, loyalty) are saved in browser storage
+  // and replace these defaults on every page. "Reset demo data" brings the defaults back.
+  window.BB_DATA.overrideKeys = { items: 'menuItems', categories: 'menuCategories', recipes: 'recipes', vouchers: 'vouchers', users: 'users', promo: 'promo', loyaltyConfig: 'loyaltyConfig' };
+  try {
+    const D = window.BB_DATA;
+    Object.keys(D.overrideKeys).forEach(k => {
+      const raw = localStorage.getItem('bb_' + D.overrideKeys[k]);
+      if (raw === null) return;
+      const val = JSON.parse(raw);
+      if (k === 'loyaltyConfig') Object.assign(D.loyalty, val);
+      else D[k] = val;
+    });
+  } catch (e) { /* storage blocked: use defaults */ }
 })();

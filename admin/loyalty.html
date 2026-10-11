@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loyalty · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .rule { font-size: .88rem; background: var(--sunk); border-radius: 8px; padding: 10px 12px; }
+    @media (max-width: 800px) { .settings { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Loyalty points</h1><div class="sub">Customers earn points by giving their mobile number at checkout or to the cashier</div></div>
+      <span class="clock" id="clock"></span>
+    </header>
+    <div class="work-body">
+      <div class="kpis" id="kpis"></div>
+
+      <form class="panel panel-pad" id="setForm" novalidate>
+        <h2>Earning and redeeming</h2>
+        <div class="settings">
+          <label class="lbl">Customer earns 1 point for every ₱<input class="input" id="sPeso" type="number" min="1" step="1"></label>
+          <label class="lbl">Minimum points before redeeming<input class="input" id="sMin" type="number" min="1" step="1"></label>
+          <button class="btn btn-primary" type="submit">Save settings</button>
+        </div>
+        <p class="rule" id="rule"></p>
+      </form>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Members</h2><input class="input" id="search" type="search" placeholder="Search name or mobile" style="max-width:240px" aria-label="Search members"></div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Member</th><th>Mobile</th><th class="r">Points</th><th class="r">Worth</th><th class="r">Paid orders</th><th class="r">Total spent</th><th>Last order</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="aBack" hidden>
+  <form class="modal" id="aForm" role="dialog" aria-modal="true" aria-labelledby="aTitle" novalidate>
+    <div class="modal-head"><h2 id="aTitle">Adjust points</h2><button type="button" class="x-btn" data-close aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <p id="aInfo" class="hint"></p>
+      <div class="form-grid">
+        <label class="lbl">Points to add (use − to remove)<input class="input" id="aPts" type="number" step="1"></label>
+        <label class="lbl">Reason<select class="input" id="aReason"><option>Goodwill (complaint)</option><option>Missed points on an order</option><option>Birthday treat</option><option>Correction</option></select></label>
+      </div>
+      <p class="err-msg" id="aErr" hidden></p>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn btn-ghost" data-close>Cancel</button><button type="submit" class="btn btn-primary">Save</button></div>
+  </form>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['admin'], 'loyalty');
+  if (!user) return;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+
+  function members() {
+    const mobiles = new Set(Object.keys(D.loyalty.members || {}).concat(Object.keys(BB.get('loyalty', {}))));
+    const orders = BB.orders.list().filter(o => o.customer && o.customer.mobile);
+    orders.forEach(o => mobiles.add(o.customer.mobile));
+    return [...mobiles].map(m => {
+      const rec = BB.loyalty.member(m) || { name: '', points: 0 };
+      const mine = orders.filter(o => o.customer.mobile === m && o.paidAt && o.status !== 'voided');
+      const last = mine.map(o => o.paidAt).sort().pop();
+      return { mobile: m, name: rec.name || (mine[0] && mine[0].customer.name) || '', points: rec.points, orders: mine.length, spent: mine.reduce((n, o) => n + o.total, 0), last };
+    }).sort((a, b) => b.points - a.points);
+  }
+
+  function render() {
+    const list = members();
+    const real = BB.orders.list().filter(o => o.paidAt && o.status !== 'voided');
+    const earned = real.reduce((n, o) => n + (o.pointsEarned || 0), 0);
+    const redeemed = real.reduce((n, o) => n + (o.pointsUsed || 0), 0);
+    const outstanding = list.reduce((n, m) => n + Math.max(0, m.points), 0);
+    $('kpis').innerHTML = `
+      <div class="kpi"><small>Members</small><strong>${list.length}</strong></div>
+      <div class="kpi"><small>Points outstanding</small><strong>${outstanding}</strong><span class="hint">Worth ${BB.peso(outstanding)} in discounts</span></div>
+      <div class="kpi"><small>Points earned (demo orders)</small><strong>${earned}</strong></div>
+      <div class="kpi"><small>Points redeemed (demo orders)</small><strong>${redeemed}</strong></div>`;
+
+    $('sPeso').value = D.loyalty.pesoPerPoint;
+    $('sMin').value = D.loyalty.minRedeem;
+    rule();
+
+    const q = $('search').value.trim().toLowerCase();
+    const rows = list.filter(m => !q || m.mobile.includes(q) || m.name.toLowerCase().includes(q));
+    $('rows').innerHTML = rows.map(m => `<tr>
+      <td><b>${esc(m.name || 'No name given')}</b></td>
+      <td class="mono" style="font-size:.84rem">${m.mobile.slice(0, 4)} ${m.mobile.slice(4, 7)} ${m.mobile.slice(7)}</td>
+      <td class="r num"><b>${m.points}</b></td>
+      <td class="r num">${BB.peso(Math.max(0, m.points))}</td>
+      <td class="r num">${m.orders}</td>
+      <td class="r num">${BB.peso(m.spent, true)}</td>
+      <td>${m.last ? BB.dateTime(m.last) : '<span class="muted">Sample member</span>'}</td>
+      <td class="r"><button class="btn btn-ghost btn-sm" data-adj="${m.mobile}">Adjust</button></td>
+    </tr>`).join('') || '<tr><td colspan="8" class="empty-row">No members match.</td></tr>';
+  }
+
+  function rule() {
+    const peso = parseInt($('sPeso').value, 10) || D.loyalty.pesoPerPoint, min = parseInt($('sMin').value, 10) || D.loyalty.minRedeem;
+    $('rule').innerHTML = `A ₱500 order earns <b>${Math.floor(500 / peso)} points</b>. Each point is ₱1 off. Customers can use points once they have <b>${min}</b>. That gives back about <b>${(100 / peso).toFixed(1)}%</b> of what they spend.`;
+  }
+  $('setForm').addEventListener('input', rule);
+  $('setForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const peso = parseInt($('sPeso').value, 10), min = parseInt($('sMin').value, 10);
+    if (!(peso >= 1) || !(min >= 1)) { BBC.toast('Enter whole numbers of 1 or more.'); return; }
+    BB.admin.save('loyaltyConfig', { pesoPerPoint: peso, minRedeem: min });
+    BB.audit.log('Changed loyalty settings', `1 point per ₱${peso} · redeem from ${min} points`);
+    BBC.toast('Loyalty settings saved');
+    render();
+  });
+  $('search').addEventListener('input', render);
+
+  let adjusting = null;
+  $('rows').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-adj]'); if (!b) return;
+    adjusting = members().find(m => m.mobile === b.dataset.adj);
+    $('aInfo').textContent = `${adjusting.name || adjusting.mobile} has ${adjusting.points} points.`;
+    $('aPts').value = ''; $('aErr').hidden = true;
+    $('aBack').hidden = false; $('aPts').focus();
+  });
+  $('aForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pts = parseInt($('aPts').value, 10);
+    if (!pts) { $('aErr').textContent = 'Enter a number of points other than zero.'; $('aErr').hidden = false; return; }
+    if (adjusting.points + pts < 0) { $('aErr').textContent = `They only have ${adjusting.points} points.`; $('aErr').hidden = false; return; }
+    BB.loyalty.add(adjusting.mobile, adjusting.name, pts);
+    BB.audit.log('Adjusted loyalty points', `${adjusting.name || adjusting.mobile} · ${pts > 0 ? '+' : ''}${pts} · ${$('aReason').value}`);
+    $('aBack').hidden = true;
+    BBC.toast('Points updated');
+    render();
+  });
+
+  document.querySelectorAll('.modal-back').forEach(back => {
+    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
+  render();
+})();
+</script>
+</body>
+</html>
