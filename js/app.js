@@ -763,11 +763,11 @@
 
   // Status wording shown to customers
   const STATUS = {
-    awaiting_payment: { label: 'Awaiting payment', chip: 'chip-red' },
+    awaiting_payment: { label: 'Awaiting payment', chip: 'chip-caramel' },
     paid: { label: 'Order received', chip: 'chip-gcash' },
-    preparing: { label: 'Preparing', chip: 'chip-caramel' },
+    preparing: { label: 'Preparing', chip: 'chip-gold' },
     ready: { label: 'Ready', chip: 'chip-green' },
-    completed: { label: 'Completed', chip: 'chip-green' },
+    completed: { label: 'Completed', chip: 'chip-muted' },
     cancelled: { label: 'Cancelled', chip: 'chip-red' },
     voided: { label: 'Voided', chip: 'chip-red' }
   };
@@ -825,7 +825,16 @@
       </div>`).join('');
   }
 
-  window.BBC = { esc, optionText, sessionLabel, orderTypeLabel, requireSession, toast, lineRows };
+  // Drawn art for a menu item: a layered glass for drinks, a plate for food
+  function art(item) {
+    const D = window.BB_DATA;
+    if (D.drinkCats.includes(item.cat)) {
+      return `<span class="art-glass" aria-hidden="true"><i style="height:22%;background:${item.tone[1]}"></i><i style="height:48%;background:linear-gradient(to top, ${item.tone[1]}, ${item.tone[0]})"></i><i style="height:12%;background:${item.tone[1]};opacity:.55"></i></span>`;
+    }
+    return `<span class="art-plate" aria-hidden="true"><i style="background:radial-gradient(circle at 35% 35%, ${item.tone[1]}, ${item.tone[0]})"></i></span>`;
+  }
+
+  window.BBC = { esc, optionText, sessionLabel, orderTypeLabel, requireSession, toast, lineRows, art };
 })();
 
 /* Brew & Bite Café — shared shell for staff screens (login guard, sidebar, clock) */
@@ -893,7 +902,13 @@
         </nav>`).join('')}
       <div class="side-user">
         <span><b>${BBC.esc(user.name)}</b><small>${ROLE_NAME[user.role]}</small></span>
-        <button type="button" id="logout">Log out</button>
+        <div class="side-buttons">
+          <button type="button" id="logout">Log out</button>
+          <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Switch to dark mode">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+        </div>
       </div>`;
     document.getElementById('logout').addEventListener('click', () => {
       BB.staff.logout();
@@ -4302,9 +4317,40 @@ BBViews['admin/audit'] = function () {
 })();
 };
 
+/* ===== Theme: light / dark ===== */
+// The saved choice wins; otherwise follow the device. Dark mode is switched on module by module
+// as each one is polished for the new palette.
+window.BBTheme = (function () {
+  const READY = ['index', 'home', 'login', 'customer', 'cashier', 'kitchen', 'inventory', 'admin'];
+  // The kitchen wall screen keeps its own setting and starts dark
+  const isKitchen = () => document.body.dataset.module === 'kitchen';
+  const KEY = () => isKitchen() ? 'bbThemeKitchen' : 'bbTheme'; // not "bb_" so Reset demo data keeps it
+  const saved = () => { try { return localStorage.getItem(KEY()); } catch (e) { return null; } };
+  const system = () => window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const supported = () => READY.includes(document.body.dataset.module);
+  const current = () => supported() ? (saved() || (isKitchen() ? 'dark' : system())) : 'light';
+  function apply() {
+    document.documentElement.dataset.theme = current();
+    document.querySelectorAll('[data-theme-toggle]').forEach(b => {
+      const dark = current() === 'dark';
+      b.setAttribute('aria-pressed', String(dark));
+      b.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+      b.title = dark ? 'Light mode' : 'Dark mode';
+    });
+  }
+  function toggle() {
+    try { localStorage.setItem(KEY(), current() === 'dark' ? 'light' : 'dark'); } catch (e) { /* storage blocked */ }
+    apply();
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest('[data-theme-toggle]')) toggle(); });
+  if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!saved()) apply(); });
+  return { apply, toggle, current, supported };
+})();
+
 /* ===== Boot: show the screen named in ?view= (or the module's first screen) ===== */
 (function () {
   const mod = document.body.dataset.module;
+  BBTheme.apply();
   const tpls = [...document.querySelectorAll('template[data-view]')];
   if (!mod || !tpls.length) return;
   const want = new URLSearchParams(location.search).get('view');
@@ -4315,4 +4361,7 @@ BBViews['admin/audit'] = function () {
   document.body.classList.add('v-' + mod + '-' + view);
   document.body.insertBefore(tpl.content.cloneNode(true), document.body.querySelector('script'));
   BBViews[mod + '/' + view]();
+  BBTheme.apply(); // label any theme toggle the screen just rendered
+  // The screen is drawn after load, so jump to #section links ourselves
+  if (location.hash.length > 1) { const target = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (target) target.scrollIntoView(); }
 })();
