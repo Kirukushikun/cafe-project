@@ -2,36 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Staff login · Brew &amp; Bite Café</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="assets/css/app.css">
-  <link rel="stylesheet" href="assets/css/staff.css">
-  <style>
-    .login { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
-    .login-art { background: var(--accent); color: #fff; padding: 40px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; }
-    .login-art .brand { color: #fff; }
-    .login-art .brand-mark { background: #fff; color: var(--accent); }
-    .login-art h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -.02em; max-width: 14ch; }
-    .login-art p { opacity: .85; max-width: 40ch; margin-top: 12px; }
-    .login-art small { font-family: var(--mono); font-size: .72rem; opacity: .7; }
-    .login-form { display: grid; place-items: center; padding: 32px 20px; }
-    .login-card { width: 100%; max-width: 380px; display: grid; gap: 16px; }
-    .login-card h2 { font-size: 1.6rem; font-weight: 700; }
-    .err { background: var(--danger-soft); color: var(--danger); padding: 9px 12px; border-radius: 8px; font-size: .88rem; }
-    .demo-accts { border: 1px dashed var(--line); border-radius: var(--radius); padding: 12px; display: grid; gap: 6px; }
-    .demo-accts h3 { font-size: .85rem; font-family: var(--body); font-weight: 600; }
-    .acct { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; text-align: left; font: inherit; color: var(--ink); }
-    .acct:hover { border-color: var(--accent); }
-    .acct b { font-weight: 600; font-size: .9rem; }
-    .acct small { display: block; color: var(--muted); font-size: .76rem; }
-    .acct code { font-family: var(--mono); font-size: .74rem; color: var(--muted); }
-    @media (max-width: 760px) { .login { grid-template-columns: 1fr; } .login-art { padding: 24px 20px; } .login-art h1 { font-size: 1.8rem; } }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<!-- Screens: login.html -->
+<body data-module="login" class="m-staff">
+<template data-view="login" data-default data-title="Staff login · Brew &amp; Bite Café" data-body-class="">
 <div class="login">
   <aside class="login-art">
     <a class="brand" href="index.html"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite Café</span></a>
@@ -57,46 +37,8 @@
     </form>
   </main>
 </div>
+</template>
 
-<script src="assets/js/data.js"></script>
-<script src="assets/js/store.js"></script>
-<script>
-(function () {
-  const $ = (id) => document.getElementById(id);
-  const params = new URLSearchParams(location.search);
-  const HOME = { cashier: 'cashier/pos.html', admin: 'admin/dashboard.html', kitchen: 'kitchen/display.html', inventory: 'inventory/ingredients.html' };
-  const ROLE_NAME = { admin: 'Owner / Admin', cashier: 'Cashier', kitchen: 'Kitchen', inventory: 'Stock clerk' };
-
-  $('accts').innerHTML = BB_DATA.users.filter(u => u.active !== false).map(u => `
-    <button type="button" class="acct" data-u="${u.username}" data-p="${u.password}">
-      <span><b>${u.name}</b><small>${ROLE_NAME[u.role]}</small></span>
-      <code>${u.username} / ${u.password}</code>
-    </button>`).join('');
-  $('accts').addEventListener('click', (e) => {
-    const b = e.target.closest('.acct');
-    if (!b) return;
-    $('username').value = b.dataset.u;
-    $('password').value = b.dataset.p;
-    $('password').focus();
-  });
-
-  // Coming from the navigator with ?role=cashier fills the first account with that role
-  const pre = BB_DATA.users.find(u => u.role === params.get('role'));
-  if (pre) $('username').value = pre.username;
-
-  $('form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const user = BB.staff.login($('username').value, $('password').value);
-    if (!user) {
-      $('err').textContent = 'Wrong username or password, or the account is disabled. Use one of the demo accounts below.';
-      $('err').hidden = false;
-      return;
-    }
-    const next = params.get('next');
-    const nextOk = next && /^[a-z-]+\/[a-z-]+\.html$/.test(next);
-    location.href = nextOk ? next : HOME[user.role];
-  });
-})();
-</script>
+<script src="js/app.js"></script>
 </body>
 </html>

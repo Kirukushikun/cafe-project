@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Brew &amp; Bite Café · Tarlac City</title>
+  <meta name="description" content="Brew & Bite Café in Tarlac City: espresso drinks, milk tea, silog meals and fresh pastries. Open daily 7 AM to 10 PM.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<!-- Screens: home.html -->
+<body data-module="home">
+<template data-view="index" data-default data-title="Brew &amp; Bite Café · Tarlac City" data-body-class="">
+<nav class="nav">
+  <div class="container">
+    <a class="brand" href="home.html"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite Café</span></a>
+    <ul>
+      <li><a href="#about">About</a></li>
+      <li><a href="#favorites">Favorites</a></li>
+      <li><a href="#how">Dine with us</a></li>
+      <li><a href="#visit">Visit</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <div>
+      <div class="eyebrow">Tarlac City · Since 2022</div>
+      <h1>Good coffee.<br>Honest food.<br><span>Right here in Tarlac.</span></h1>
+      <p class="lead">Espresso drinks pulled to order, brown sugar milk tea, all-day silog plates and pastries baked every morning. Come for a quick latte or stay the whole afternoon.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#visit">Visit us today</a>
+        <a class="btn btn-ghost" href="#favorites">See our favorites</a>
+      </div>
+      <div class="hero-facts">
+        <span><b>Open daily</b> 7 AM – 10 PM</span>
+        <span><b>Free Wi-Fi</b> and power outlets</span>
+        <span><b>GCash &amp; Maya</b> accepted</span>
+      </div>
+    </div>
+    <div class="collage" aria-hidden="true">
+      <div class="tile a"><small>Best seller</small><b>Spanish Latte</b></div>
+      <div class="tile b"><small>Non-coffee</small><b>Matcha Latte</b></div>
+      <div class="tile c"><small>Milk tea</small><b>Brown Sugar Pearl</b></div>
+      <div class="tile d"><small>All-day breakfast</small><b>Beef Tapa with garlic rice</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="promo-strip">
+  <div class="container">
+    <strong id="promoText">10% off your order this October</strong>
+    <span>Use code <code id="promoCode">BREWBITE10</code> when you order at your table</span>
+  </div>
+</div>
+
+<main>
+  <section class="block" id="about">
+    <div class="container about">
+      <div>
+        <div class="block-head">
+          <div class="eyebrow">Our story</div>
+          <h2>A neighborhood café for students, workers and barkadas</h2>
+        </div>
+        <p>Brew &amp; Bite started in 2022 as a small coffee counter near the city center. Today we have 14 tables, a full kitchen and a team of nine who know most of our regulars by name and by order.</p>
+        <p>We use Benguet arabica for our espresso, Davao cacao for our chocolate drinks and fresh milk delivered every morning. Our rice meals are cooked the way we like them at home: generous, garlicky and served with atchara on the side.</p>
+      </div>
+      <div class="about-stats">
+        <div><strong>60+</strong><span>items on the menu</span></div>
+        <div><strong>14</strong><span>tables, about 44 seats</span></div>
+        <div><strong>7 AM</strong><span>first shot pulled every day</span></div>
+        <div><strong>4.8 ★</strong><span>average Facebook rating</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="favorites" style="padding-top:0">
+    <div class="container">
+      <div class="block-head">
+        <div class="eyebrow">Customer favorites</div>
+        <h2>What our regulars keep ordering</h2>
+        <p>Our best sellers and the newest additions to the menu.</p>
+      </div>
+      <div class="favs" id="favs"></div>
+    </div>
+  </section>
+
+  <section class="block how" id="how">
+    <div class="container">
+      <div class="block-head">
+        <div class="eyebrow">Dine with us</div>
+        <h2>No more waiting in line to order</h2>
+        <p>Every table has its own QR code. Order and pay from your phone, and we bring everything to your table.</p>
+      </div>
+      <div class="steps">
+        <div><h3>Grab a table</h3><p>Find a seat. Each table has a QR code standee with its table number.</p></div>
+        <div><h3>Scan and order</h3><p>Scan the code with your phone camera. Choose your size, sugar level and add-ons like oat milk or an extra shot.</p></div>
+        <div><h3>Pay your way, we serve</h3><p>Pay on your phone or at the counter. Watch your order go from Preparing to Ready, then we bring it to you.</p>
+          <div class="pay-row"><span class="chip chip-gcash">GCash</span><span class="chip chip-green">Maya</span><span class="chip chip-caramel">Cash</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="visit">
+    <div class="container visit">
+      <div>
+        <div class="block-head">
+          <div class="eyebrow">Visit</div>
+          <h2>Drop by anytime</h2>
+        </div>
+        <dl>
+          <dt>Address</dt><dd id="addr">F. Tañedo St., San Nicolas, Tarlac City, Tarlac</dd>
+          <dt>Hours</dt><dd id="hours">Mon–Sun · 7:00 AM – 10:00 PM</dd>
+          <dt>Phone</dt><dd id="phone">0917 555 0142</dd>
+          <dt>Facebook</dt><dd id="fb">Brew &amp; Bite Café Tarlac</dd>
+          <dt>Discounts</dt><dd>20% senior citizen and PWD discount. Just show your ID at the counter.</dd>
+        </dl>
+      </div>
+      <div class="map" role="img" aria-label="Map showing Brew and Bite Café on F. Tañedo Street">
+        <span class="pin">Brew &amp; Bite Café</span>
+        <small>F. Tañedo St. · Tarlac City</small>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <span class="brand"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite Café</span></span>
+    <span>© 2026 Brew &amp; Bite Café · A fictional café for a case study</span>
+  </div>
+</footer>
+</template>
+
+<script src="js/app.js"></script>
+</body>
+</html>

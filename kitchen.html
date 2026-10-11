@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kitchen Display · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<!-- Screens: kitchen.html -->
+<body data-module="kitchen">
+<template data-view="display" data-default data-title="Kitchen Display · Brew &amp; Bite Café" data-body-class="">
+<header class="k-head">
+  <a class="brand" href="index.html"><span class="brand-mark">B&amp;B</span></a>
+  <h1>Kitchen display</h1>
+  <div class="k-stats" id="stats"></div>
+  <div class="k-tools">
+    <span class="clock" id="clock"></span>
+    <button class="k-btn" type="button" id="soldOutBtn">Sold-out items</button>
+    <button class="k-btn" type="button" id="soundBtn" aria-pressed="false">Sound off</button>
+    <button class="k-btn" type="button" id="fsBtn">Full screen</button>
+    <span class="who" id="who"></span>
+    <button class="k-btn" type="button" id="logout">Log out</button>
+  </div>
+</header>
+
+<main class="board">
+  <section class="col col-new"><div class="col-head"><h2>New</h2><span id="nNew">0</span></div><div class="tickets" id="colNew"></div></section>
+  <section class="col col-prep"><div class="col-head"><h2>Preparing</h2><span id="nPrep">0</span></div><div class="tickets" id="colPrep"></div></section>
+  <section class="col col-ready"><div class="col-head"><h2>Ready</h2><span id="nReady">0</span></div><div class="tickets" id="colReady"></div></section>
+</main>
+
+<div class="recent" id="recent"></div>
+
+<div class="drawer-back" id="drawerBack" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Menu availability">
+  <div class="drawer-head"><h2 style="font-size:1.1rem">Menu availability</h2><button class="k-btn" type="button" id="drawerClose">Done</button></div>
+  <div class="drawer-body" id="availList"></div>
+</aside>
+</template>
+
+<script src="js/app.js"></script>
+</body>
+</html>

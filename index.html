@@ -2,63 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>System Navigator · Brew &amp; Bite Café</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="assets/css/app.css">
-  <style>
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--line); }
-    .topbar .container { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; flex-wrap: wrap; }
-    .intro { padding-block: 36px 8px; display: grid; gap: 8px; }
-    .intro h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -.02em; }
-    .intro p { max-width: 64ch; color: var(--muted); }
-
-    section.group { padding-block: 28px; display: grid; gap: 14px; }
-    section.group + section.group { border-top: 1px solid var(--line); }
-    .group-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
-    .group-head h2 { font-size: 1.3rem; font-weight: 700; }
-    .group-head p { font-size: .9rem; color: var(--muted); max-width: 60ch; }
-
-    /* Table QR grid */
-    .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
-    .qr {
-      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-      padding: 12px; display: grid; gap: 8px; justify-items: center; text-decoration: none; color: var(--ink);
-      transition: border-color .15s, box-shadow .15s;
-    }
-    .qr:hover { border-color: var(--accent); box-shadow: var(--shadow); }
-    .qr svg { width: 56px; height: 56px; color: var(--ink); }
-    .qr b { font-family: var(--display); font-size: 1rem; }
-    .qr small { font-family: var(--mono); font-size: .68rem; color: var(--muted); }
-    .qr.takeout { background: var(--caramel-soft); border-color: transparent; }
-
-    /* Screen list */
-    .screens { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-    .area { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; align-self: start; }
-    .area-head { padding: 12px 16px; background: var(--sunk); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .area-head h3 { font-size: 1rem; }
-    .area ul { list-style: none; margin: 0; padding: 0; }
-    .area li { border-top: 1px solid var(--line); }
-    .area li:first-child { border-top: 0; }
-    .area li a, .area li > span {
-      display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center;
-      padding: 9px 16px; text-decoration: none; color: var(--ink); font-size: .9rem;
-    }
-    .area li a:hover { background: var(--accent-soft); }
-    .area li > span { color: var(--muted); }
-    .area .f { grid-column: 1; font-family: var(--mono); font-size: .72rem; color: var(--muted); }
-    .area .chip { grid-row: 1 / span 2; grid-column: 2; }
-
-    footer { border-top: 1px solid var(--line); margin-top: 20px; padding-block: 24px; font-size: .85rem; color: var(--muted); }
-    footer .container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
-    .reset { display: flex; gap: 10px; align-items: center; }
-    #resetMsg { color: var(--accent); }
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-
+<!-- Screens: index.html -->
+<body data-module="index">
+<template data-view="index" data-default data-title="System Navigator · Brew &amp; Bite Café" data-body-class="">
 <header class="topbar">
   <div class="container">
     <a class="brand" href="index.html">
@@ -106,79 +59,8 @@
     </span>
   </div>
 </footer>
+</template>
 
-<script src="assets/js/data.js"></script>
-<script src="assets/js/store.js"></script>
-<script>
-  // Small decorative QR-like glyph (not a real code)
-  const qrGlyph = '<svg viewBox="0 0 21 21" fill="currentColor" aria-hidden="true"><path d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3zM0 14h7v7H0zm1 1v5h5v-5zm1 1h3v3H2zM9 0h2v2H9zM9 3h1v3H9zM11 4h2v2h-2zM8 8h3v1H8zM12 8h2v2h-2zM15 8h2v1h-2zM18 8h3v2h-3zM9 10h2v2H9zM14 11h3v2h-3zM8 13h2v3H8zM11 14h2v2h-2zM14 14h1v4h-1zM16 15h2v2h-2zM19 14h2v3h-2zM9 18h3v3H9zM13 19h2v2h-2zM16 18h1v3h-1zM18 19h3v2h-3zM0 8h2v2H0zM3 9h2v2H3zM5 8h1v4H5z"/></svg>';
-
-  const grid = document.getElementById('qrGrid');
-  let html = '';
-  for (let t = 1; t <= BB_DATA.cafe.tables; t++) {
-    html += `<a class="qr" href="customer/menu.html?table=${t}">${qrGlyph}<b>Table ${t}</b><small>Dine-in</small></a>`;
-  }
-  html += `<a class="qr takeout" href="customer/menu.html?type=takeout">${qrGlyph}<b>Counter</b><small>Take-out</small></a>`;
-  grid.innerHTML = html;
-
-  // Screen inventory. "done" marks screens that exist.
-  const areas = [
-    { name: 'Public', screens: [
-      { name: 'Café homepage', file: 'home/index.html', done: true },
-      { name: 'Staff login', file: 'login.html', done: true }
-    ]},
-    { name: 'Customer', screens: [
-      { name: 'Menu (opened by QR scan)', file: 'customer/menu.html?table=5', done: true },
-      { name: 'Cart', file: 'customer/cart.html', done: true },
-      { name: 'Checkout: type, voucher, points, method', file: 'customer/checkout.html', done: true },
-      { name: 'GCash / Maya payment (from checkout)', file: 'customer/pay.html', done: true, flowOnly: true },
-      { name: 'Success and receipt (after paying)', file: 'customer/success.html', done: true, flowOnly: true },
-      { name: 'My orders and tracker', file: 'customer/track.html', done: true }
-    ]},
-    { name: 'Cashier', screens: [
-      { name: 'POS: walk-in orders', file: 'cashier/pos.html', done: true },
-      { name: 'Orders: payments, cancel, void, serve', file: 'cashier/orders.html', done: true },
-      { name: 'Payment and senior/PWD discount (from Orders)', file: 'cashier/payment.html', done: true, flowOnly: true },
-      { name: 'Receipt (after payment)', file: 'cashier/receipt.html', done: true, flowOnly: true }
-    ]},
-    { name: 'Kitchen', screens: [
-      { name: 'Kitchen display and sold-out switches', file: 'kitchen/display.html', done: true }
-    ]},
-    { name: 'Inventory', screens: [
-      { name: 'Ingredients and stock', file: 'inventory/ingredients.html', done: true },
-      { name: 'Low-stock alerts', file: 'inventory/alerts.html', done: true },
-      { name: 'Suppliers', file: 'inventory/suppliers.html', done: true },
-      { name: 'Purchase orders: create, send, receive', file: 'inventory/purchase-orders.html', done: true },
-      { name: 'Wastage and stock counts', file: 'inventory/wastage.html', done: true }
-    ]},
-    { name: 'Admin', screens: [
-      { name: 'Sales dashboard', file: 'admin/dashboard.html', done: true },
-      { name: 'Reports: sales, best sellers, usage, wastage, payments', file: 'admin/reports.html', done: true },
-      { name: 'Menu, prices and availability', file: 'admin/menu.html', done: true },
-      { name: 'Recipes and costing', file: 'admin/recipes.html', done: true },
-      { name: 'Promos and vouchers', file: 'admin/promos.html', done: true },
-      { name: 'Loyalty', file: 'admin/loyalty.html', done: true },
-      { name: 'Users and roles', file: 'admin/users.html', done: true },
-      { name: 'Audit logs', file: 'admin/audit.html', done: true }
-    ]}
-  ];
-
-  document.getElementById('screens').innerHTML = areas.map(a => {
-    const built = a.screens.filter(s => s.done).length;
-    const rows = a.screens.map(s => s.flowOnly
-      ? `<li><span><span style="color:var(--ink)">${s.name}</span><span class="f">${s.file}</span><span class="chip chip-green">Ready</span></span></li>`
-      : s.done
-      ? `<li><a href="${s.file}"><span>${s.name}</span><span class="f">${s.file.split('?')[0]}</span><span class="chip chip-green">Ready</span></a></li>`
-      : `<li><span><span>${s.name}</span><span class="f">${s.file}</span><span class="chip" style="background:var(--sunk)">Planned</span></span></li>`
-    ).join('');
-    return `<div class="area"><div class="area-head"><h3>${a.name}</h3><span class="mono muted" style="font-size:.72rem">${built}/${a.screens.length} built</span></div><ul>${rows}</ul></div>`;
-  }).join('');
-
-  document.getElementById('resetDemo').addEventListener('click', () => {
-    document.getElementById('resetMsg').textContent = BB.reset()
-      ? 'Demo data reset.'
-      : 'Could not reset: browser storage is blocked.';
-  });
-</script>
+<script src="js/app.js"></script>
 </body>
 </html>
