@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <style>
+    /* Top bar */
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+    .topbar .container { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 12px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+    /* Hero */
+    .hero { padding-block: 56px 48px; }
+    .hero .container { display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
+    .hero h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); font-weight: 800; letter-spacing: -.025em; margin-top: 10px; }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero-lead { font-size: 1.08rem; color: var(--muted); max-width: 52ch; margin-top: 16px; }
+    .table-pick { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .table-pick label { display: grid; gap: 4px; font-size: .82rem; color: var(--muted); }
+    .table-pick select {
+      font: 500 .95rem var(--body); padding: 10px 12px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-width: 130px;
+    }
+    .hero-note { margin-top: 12px; font-size: .85rem; color: var(--muted); }
+
+    /* Phone preview */
+    .phone {
+      justify-self: center; width: 100%; max-width: 300px;
+      background: var(--ink); border-radius: 34px; padding: 10px; box-shadow: var(--shadow);
+    }
+    .screen { background: var(--bg); border-radius: 26px; overflow: hidden; }
+    .screen-head { background: var(--accent); color: #fff; padding: 18px 16px 14px; }
+    .screen-head small { font-family: var(--mono); font-size: .68rem; opacity: .8; letter-spacing: .08em; }
+    .screen-head strong { display: block; font: 700 1.05rem var(--display); }
+    .cats { display: flex; gap: 6px; padding: 10px 12px; overflow: hidden; }
+    .cats span { font-size: .72rem; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); white-space: nowrap; }
+    .cats span.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .items { display: grid; gap: 8px; padding: 0 12px 12px; }
+    .item { background: var(--surface); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; align-items: center; }
+    .thumb { width: 38px; height: 38px; border-radius: 8px; }
+    .t1 { background: linear-gradient(135deg, #7A4A26, #C99467); }
+    .t2 { background: linear-gradient(135deg, #3F6B3A, #A9C98A); }
+    .t3 { background: linear-gradient(135deg, #B67A2C, #F0CF8F); }
+    .item b { font-size: .82rem; display: block; line-height: 1.2; }
+    .item span { font-size: .7rem; color: var(--muted); }
+    .item i { font-style: normal; font-family: var(--mono); font-size: .76rem; }
+    .cartbar { margin: 0 12px 14px; background: var(--accent); color: #fff; border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; font-size: .8rem; font-weight: 600; }
+
+    /* Sections */
+    section.block { padding-block: 48px; }
+    section.block + section.block { border-top: 1px solid var(--line); }
+    .block-head { display: grid; gap: 6px; margin-bottom: 24px; }
+    .block-head h2 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.01em; }
+
+    /* Interface cards */
+    .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .role {
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 20px; display: grid; gap: 10px; grid-template-rows: auto auto 1fr auto;
+      text-decoration: none; color: var(--ink); transition: border-color .15s, box-shadow .15s;
+    }
+    .role:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+    .role-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .role-icon { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+    .role-icon svg { width: 22px; height: 22px; }
+    .role h3 { font-size: 1.15rem; }
+    .role ul { margin: 0; padding-left: 18px; font-size: .9rem; color: var(--muted); display: grid; gap: 2px; }
+    .role-go { font-weight: 600; font-size: .9rem; color: var(--accent); }
+    .role-go .path { font-family: var(--mono); font-weight: 400; font-size: .74rem; color: var(--muted); margin-left: 6px; }
+
+    /* Order flow */
+    .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; counter-reset: step; }
+    .step { padding: 20px 20px 20px 0; display: grid; gap: 6px; align-content: start; position: relative; counter-increment: step; }
+    .step + .step { padding-left: 20px; border-left: 1px solid var(--line); }
+    .step::before { content: "Step " counter(step); font-family: var(--mono); font-size: .72rem; color: var(--muted); letter-spacing: .06em; }
+    .step h3 { font-size: 1.05rem; }
+    .step p { font-size: .9rem; color: var(--muted); }
+    .pay-note {
+      margin-top: 20px; display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start;
+      background: var(--gcash-soft); border-radius: var(--radius); padding: 14px 18px; font-size: .9rem;
+    }
+    .pay-note code { font-family: var(--mono); font-size: .84rem; }
+
+    /* Today panel */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .stat { background: var(--surface); padding: 18px 20px; display: grid; gap: 4px; }
+    .stat small { font-size: .8rem; color: var(--muted); }
+    .stat strong { font: 700 1.6rem var(--display); font-variant-numeric: tabular-nums; }
+    .stat span { font-size: .8rem; }
+    .split { height: 6px; border-radius: 3px; overflow: hidden; display: flex; margin-top: 6px; }
+    .split i { display: block; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--line); padding-block: 28px; font-size: .85rem; color: var(--muted); }
+    footer .container { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+    .toast { font-size: .82rem; color: var(--accent); }
+
+    @media (max-width: 860px) {
+      .hero .container { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr 1fr; }
+      .step:nth-child(3) { padding-left: 0; border-left: 0; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .roles { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: 1fr; }
+      .step, .step + .step { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+      .topbar .chip { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">B&amp;B</span>
+      <span class="brand-name">Brew &amp; Bite Café</span>
+    </a>
+    <div class="topbar-right">
+      <span class="chip chip-caramel">Demo mode · sample data</span>
+      <a class="btn btn-ghost" href="login.html">Staff login</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div>
+        <div class="eyebrow">Tarlac City · Ordering, Kitchen &amp; Inventory System</div>
+        <h1>Order from your table. <em>We’ll bring it to you.</em></h1>
+        <p class="hero-lead">Scan the QR code on your table, pick your drink and add-ons, and pay with cash or GCash. Your order goes straight to the kitchen screen, and you can watch it go from Preparing to Ready on your phone.</p>
+
+        <form class="table-pick" id="tableForm">
+          <label for="tableSelect">Simulate scanning a table QR
+            <select id="tableSelect" name="table"></select>
+          </label>
+          <button class="btn btn-primary" type="submit">Open customer menu</button>
+          <a class="btn btn-ghost" href="customer/menu.html?type=takeout">Take-out order</a>
+        </form>
+        <p class="hero-note">In the real café, each of the 14 tables has its own printed QR code. <a href="qr-tables.html">See the table QR codes</a>.</p>
+      </div>
+
+      <div class="phone" aria-hidden="true">
+        <div class="screen">
+          <div class="screen-head">
+            <small>DINE-IN · TABLE 5</small>
+            <strong>What are you craving?</strong>
+          </div>
+          <div class="cats"><span class="on">Coffee</span><span>Non-coffee</span><span>Milk tea</span><span>Rice meals</span></div>
+          <div class="items">
+            <div class="item"><div class="thumb t1"></div><div><b>Café Latte</b><span>Hot or iced · M / L</span></div><i>₱145</i></div>
+            <div class="item"><div class="thumb t2"></div><div><b>Matcha Latte</b><span>Oat milk available</span></div><i>₱165</i></div>
+            <div class="item"><div class="thumb t3"></div><div><b>Caramel Macchiato</b><span>Extra shot +₱35</span></div><i>₱175</i></div>
+          </div>
+          <div class="cartbar"><span>2 items</span><span>View cart · ₱310</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interfaces -->
+  <section class="block">
+    <div class="container">
+      <div class="block-head">
+        <div class="eyebrow">Choose an interface</div>
+        <h2>One system, five screens for five jobs</h2>
+        <p class="muted">Open each interface in its own browser tab. An order placed on the customer menu shows up on the cashier and kitchen screens.</p>
+      </div>
+
+      <div class="roles">
+        <a class="role" href="customer/menu.html?table=5">
+          <div class="role-top">
+            <span class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg></span>
+            <span class="chip chip-green">Phone</span>
+          </div>
+          <h3>Customer</h3>
+          <ul><li>Browse the menu by category</li><li>Choose size and add-ons</li><li>Pay with cash, GCash or Maya</li><li>Track order status, earn points</li></ul>
+          <span class="role-go">Open menu →<span class="path">customer/</span></span>
+        </a>
+
+        <a class="role" href="login.html?role=cashier">
+          <div class="role-top">
+            <span class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 8h4M7 11h7"/></svg></span>
+            <span class="chip chip-green">Counter</span>
+          </div>
+          <h3>Cashier</h3>
+          <ul><li>Take walk-in orders (POS)</li><li>Confirm cash payments, give change</li><li>Apply senior / PWD discount</li><li>Show and print receipts</li></ul>
+          <span class="role-go">Open POS →<span class="path">cashier/</span></span>
+        </a>
+
+        <a class="role" href="login.html?role=kitchen">
+          <div class="role-top">
+            <span class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17M9 3v3M13 3v3"/></svg></span>
+            <span class="chip chip-green">Wall screen</span>
+          </div>
+          <h3>Kitchen &amp; Barista</h3>
+          <ul><li>See paid orders in a live queue</li><li>Read add-ons and notes per item</li><li>Mark Preparing, then Ready</li><li>Flag items as sold out</li></ul>
+          <span class="role-go">Open kitchen display →<span class="path">kitchen/</span></span>
+        </a>
+
+        <a class="role" href="login.html?role=inventory">
+          <div class="role-top">
+            <span class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/></svg></span>
+            <span class="chip chip-green">Back office</span>
+          </div>
+          <h3>Inventory</h3>
+          <ul><li>Track ingredient stock levels</li><li>Get low-stock alerts</li><li>Manage suppliers and purchase orders</li><li>Log wastage and stock counts</li></ul>
+          <span class="role-go">Open inventory →<span class="path">inventory/</span></span>
+        </a>
+
+        <a class="role" href="login.html?role=admin">
+          <div class="role-top">
+            <span class="role-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span>
+            <span class="chip chip-green">Owner</span>
+          </div>
+          <h3>Admin</h3>
+          <ul><li>Sales dashboard and reports</li><li>Menu, prices and recipes</li><li>Promos, vouchers and loyalty</li><li>Users, roles and audit logs</li></ul>
+          <span class="role-go">Open dashboard →<span class="path">admin/</span></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- How an order moves -->
+  <section class="block">
+    <div class="container">
+      <div class="block-head">
+        <div class="eyebrow">How an order moves</div>
+        <h2>From the table QR to the kitchen in four steps</h2>
+      </div>
+      <div class="flow">
+        <div class="step"><h3>Scan and order</h3><p>The customer scans the table QR, adds a Café Latte (L) with oat milk and an extra shot, then checks out as dine-in.</p></div>
+        <div class="step"><h3>Pay</h3><p>GCash or Maya marks the order Paid right away. Cash orders wait for the cashier to confirm.</p></div>
+        <div class="step"><h3>Kitchen prepares</h3><p>The order appears on the kitchen display. Ingredients are deducted from stock based on the recipe.</p></div>
+        <div class="step"><h3>Ready</h3><p>The barista taps Ready. The customer’s tracker updates and the order is served to Table 5.</p></div>
+      </div>
+      <div class="pay-note">
+        <span class="chip chip-gcash">GCash</span>
+        <p>Payments are simulated. Tapping Pay saves a payment record with the method, amount, status <b>Paid</b>, a reference number like <code>GC-20261011-0001</code>, and the date and time. No real money moves and no outside service is contacted. The dashboard and reports total sales from these records.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Today at a glance -->
+  <section class="block">
+    <div class="container">
+      <div class="block-head">
+        <div class="eyebrow">Today at a glance · sample data</div>
+        <h2>What the owner sees without counting the drawer</h2>
+      </div>
+      <div class="stats">
+        <div class="stat"><small>Sales today</small><strong>₱18,420</strong><span class="muted">142 orders</span></div>
+        <div class="stat"><small>Payment mix</small><strong>58% GCash</strong>
+          <div class="split" aria-label="GCash 58%, Cash 34%, Maya 8%"><i style="width:58%;background:var(--gcash)"></i><i style="width:34%;background:var(--caramel)"></i><i style="width:8%;background:var(--accent)"></i></div>
+          <span class="muted">Cash 34% · Maya 8%</span></div>
+        <div class="stat"><small>Best seller</small><strong>Iced Latte</strong><span class="muted">38 cups sold</span></div>
+        <div class="stat"><small>Low stock</small><strong>3 items</strong><span><span class="chip chip-red">Oat milk</span> <span class="chip chip-red">Cream cheese</span></span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <span>Brew &amp; Bite Café is a fictional business for a case study. All data is sample data stored in this browser.</span>
+    <span>
+      <button class="btn btn-ghost" id="resetDemo" type="button">Reset demo data</button>
+      <span class="toast" id="resetMsg" role="status"></span>
+    </span>
+  </div>
+</footer>
+
+<script>
+  // Table QR simulation: 14 tables in the café
+  const select = document.getElementById('tableSelect');
+  for (let t = 1; t <= 14; t++) {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = 'Table ' + t;
+    if (t === 5) opt.selected = true;
+    select.appendChild(opt);
+  }
+  document.getElementById('tableForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    window.location.href = 'customer/menu.html?table=' + select.value;
+  });
+
+  // Clears everything the mockup saves in this browser (keys start with "bb_")
+  document.getElementById('resetDemo').addEventListener('click', () => {
+    try {
+      Object.keys(localStorage).filter(k => k.startsWith('bb_')).forEach(k => localStorage.removeItem(k));
+      document.getElementById('resetMsg').textContent = 'Demo data reset.';
+    } catch (err) {
+      document.getElementById('resetMsg').textContent = 'Could not reset: browser storage is blocked.';
+    }
+  });
+</script>
+</body>
+</html>
