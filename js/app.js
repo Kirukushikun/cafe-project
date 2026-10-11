@@ -1482,10 +1482,10 @@ BBViews['customer/menu'] = function () {
   $('menu').innerHTML = D.categories.map(c => {
     const rows = D.items.filter(i => i.cat === c.id).map(i => `
       <button class="m-item" type="button" data-item="${i.id}" data-search="${esc((i.name + ' ' + i.desc).toLowerCase())}" ${i.soldOut ? 'disabled' : ''}>
-        <span class="thumb" style="${tone(i)}">${ICONS[c.icon]}</span>
+        <span class="thumb">${BBC.art(i)}</span>
         <span class="m-body">
           <span class="m-name">${esc(i.name)}</span>
-          ${i.tags || i.soldOut ? `<span class="tags">${(i.tags || []).map(t => `<span class="chip ${t === 'New' ? 'chip-gcash' : 'chip-caramel'}">${t}</span>`).join('')}${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>` : ''}
+          ${i.tags || i.soldOut ? `<span class="tags">${(i.tags || []).map(t => `<span class="chip ${t === 'New' ? 'chip-green' : 'chip-gold'}">${t}</span>`).join('')}${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>` : ''}
           <span class="m-desc">${esc(i.desc)}</span>
           <span class="m-foot">
             <span class="m-price">${hasPriceRange(i) ? 'from ' : ''}${BB.peso(i.price)}</span>
@@ -1550,9 +1550,8 @@ BBViews['customer/menu'] = function () {
     qty = 1;
     $('qty').textContent = qty;
     $('sheetNotes').value = '';
-    $('sheetHero').style.cssText = tone(current);
-    $('sheetHero').querySelectorAll('svg').forEach(s => s.remove());
-    $('sheetHero').insertAdjacentHTML('beforeend', ICONS[catOf(current).icon]);
+    $('sheetHero').querySelectorAll('.art-glass, .art-plate').forEach(s => s.remove());
+    $('sheetHero').insertAdjacentHTML('beforeend', BBC.art(current));
     $('sheetTitle').textContent = current.name;
     $('sheetDesc').textContent = current.desc;
     $('sheetBase').textContent = BB.peso(current.price);
@@ -2042,7 +2041,7 @@ BBViews['customer/success'] = function () {
       <span>Payment</span><span>${methodName}${paid ? '' : ' · unpaid'}</span>
       ${paid ? `<span>Reference no.</span><span>${payment.referenceNo}</span>
       <span>Paid on</span><span>${BB.dateTime(payment.paidAt)}</span>
-      <span>Status</span><span style="color:var(--accent)">PAID</span>` : ''}
+      <span>Status</span><span style="color:var(--good);font-weight:600">PAID</span>` : ''}
     </div>
     <div class="r-foot">Thank you for visiting Brew &amp; Bite Café!</div>`;
 })();
