@@ -1037,12 +1037,20 @@ body.m-staff { background: #fff; }
 }
 
 /* ===== kitchen/display ===== */
+/* Wall screen. Dark roast by default (less glare); a light version for bright kitchens.
+   Column colours follow the shared status set: New = blue, Preparing = gold, Ready = green, Late = red. */
 body.v-kitchen-display {
-      --k-bg: #111512; --k-col: #181D19; --k-card: #222923; --k-line: #333C35;
-      --k-ink: #ECF0EC; --k-muted: #9AA59D;
-      --k-new: #5B9BF0; --k-prep: #E0A55A; --k-ready: #6CC593; --k-late: #F0796B;
-      color-scheme: dark;
-    }
+  --k-bg: #120E0B; --k-col: #1A1411; --k-card: #251C17; --k-line: #3B2F28; --k-hover: rgba(243, 234, 224, .04);
+  --k-ink: #F3EAE0; --k-muted: #B9A898;
+  --k-new: #8FB0EE; --k-prep: #E6B062; --k-ready: #8FC48A; --k-late: #F0907F; --k-on: #1A1411;
+  color-scheme: dark;
+}
+[data-theme="light"] body.v-kitchen-display {
+  --k-bg: #ECE4D9; --k-col: #F6F1EA; --k-card: #FFFDF9; --k-line: #E2D6C8; --k-hover: rgba(43, 30, 23, .04);
+  --k-ink: #2B1E17; --k-muted: #6E5F55;
+  --k-new: #2A5CB8; --k-prep: #8A5A12; --k-ready: #3B6B36; --k-late: #A6372A; --k-on: #FFFFFF;
+  color-scheme: light;
+}
 html:has(> body.v-kitchen-display), body.v-kitchen-display { height: 100%; }
 body.v-kitchen-display { background: var(--k-bg); color: var(--k-ink); display: flex; flex-direction: column; overflow: hidden; }
 .v-kitchen-display .k-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--k-line); flex-wrap: wrap; }
@@ -1054,7 +1062,7 @@ body.v-kitchen-display { background: var(--k-bg); color: var(--k-ink); display: 
 .v-kitchen-display .k-btn { background: var(--k-card); color: var(--k-ink); border: 1px solid var(--k-line); border-radius: 8px; padding: 7px 12px; font: 500 .85rem var(--body); cursor: pointer; }
 .v-kitchen-display .k-btn:hover { border-color: var(--k-muted); }
 .v-kitchen-display .k-btn.on { border-color: var(--k-ready); color: var(--k-ready); }
-.v-kitchen-display .k-btn:focus-visible { outline: 3px solid var(--k-new); outline-offset: 2px; }
+.v-kitchen-display .k-btn:focus-visible { outline: 2px solid var(--k-ink); outline-offset: 2px; }
 .v-kitchen-display .clock { font-family: var(--mono); color: var(--k-muted); font-size: .85rem; }
 .v-kitchen-display .who { font-size: .82rem; color: var(--k-muted); }
 .v-kitchen-display .board { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px; min-height: 0; }
@@ -1081,14 +1089,14 @@ body.v-kitchen-display { background: var(--k-bg); color: var(--k-ink); display: 
 .v-kitchen-display .tk-flag { margin: 8px 12px 0; font-size: .76rem; font-family: var(--mono); color: var(--k-prep); border: 1px dashed var(--k-prep); border-radius: 6px; padding: 3px 8px; justify-self: start; }
 .v-kitchen-display .tk-items { list-style: none; margin: 0; padding: 6px 0; }
 .v-kitchen-display .tk-items li { display: grid; grid-template-columns: 34px 1fr; gap: 6px; padding: 7px 12px; cursor: pointer; }
-.v-kitchen-display .tk-items li:hover { background: rgba(255, 255, 255, .03); }
+.v-kitchen-display .tk-items li:hover { background: var(--k-hover); }
 .v-kitchen-display .tk-items .q { font: 700 1.05rem var(--mono); }
 .v-kitchen-display .tk-items b { font-weight: 600; font-size: 1rem; }
 .v-kitchen-display .tk-items small { display: block; color: var(--k-muted); font-size: .84rem; line-height: 1.35; }
-.v-kitchen-display .tk-items .note { color: #1B211D; background: var(--k-prep); border-radius: 4px; padding: 1px 6px; margin-top: 3px; display: inline-block; font-weight: 600; font-size: .8rem; }
+.v-kitchen-display .tk-items .note { color: var(--k-on); background: var(--k-prep); border-radius: 4px; padding: 1px 6px; margin-top: 3px; display: inline-block; font-weight: 600; font-size: .8rem; }
 .v-kitchen-display .tk-items li.done b, .v-kitchen-display .tk-items li.done .q, .v-kitchen-display .tk-items li.done small { text-decoration: line-through; opacity: .45; }
 .v-kitchen-display .tk-foot { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--k-line); }
-.v-kitchen-display .tk-go { background: var(--c); color: #111512; border: 0; border-radius: 8px; padding: 11px; font: 700 .95rem var(--body); cursor: pointer; }
+.v-kitchen-display .tk-go { background: var(--c); color: var(--k-on); border: 0; border-radius: 8px; padding: 11px; font: 700 .95rem var(--body); cursor: pointer; }
 .v-kitchen-display .tk-go:focus-visible, .v-kitchen-display .tk-alt:focus-visible { outline: 3px solid var(--k-ink); outline-offset: 2px; }
 .v-kitchen-display .tk-alt { background: transparent; color: var(--k-muted); border: 1px solid var(--k-line); border-radius: 8px; padding: 0 12px; font: 500 .85rem var(--body); cursor: pointer; }
 .v-kitchen-display .recent { border-top: 1px solid var(--k-line); padding: 8px 16px; display: flex; gap: 8px; align-items: center; overflow-x: auto; font-size: .82rem; color: var(--k-muted); }
@@ -1105,8 +1113,9 @@ body.v-kitchen-display { background: var(--k-bg); color: var(--k-ink); display: 
 .v-kitchen-display .toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
 .v-kitchen-display .toggle input:checked + span { background: var(--k-ready); }
 .v-kitchen-display .toggle input:checked + span::after { transform: translateX(20px); }
-.v-kitchen-display .toggle input:focus-visible + span { outline: 3px solid var(--k-new); outline-offset: 2px; }
+.v-kitchen-display .toggle input:focus-visible + span { outline: 2px solid var(--k-ink); outline-offset: 2px; }
 .v-kitchen-display .avail.off { color: var(--k-late); }
+.v-kitchen-display .k-head .theme-toggle { width: 34px; height: 34px; background: var(--k-card); color: var(--k-ink); border-color: var(--k-line); }
 @media (max-width: 900px) {
 body.v-kitchen-display { overflow: auto; height: auto; }
 .v-kitchen-display .board { grid-template-columns: 1fr; }
