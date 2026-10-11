@@ -2208,7 +2208,7 @@ BBViews['cashier/pos'] = function () {
     const items = D.items.filter(i => (activeCat === 'all' || i.cat === activeCat) && (!q || i.name.toLowerCase().includes(q)));
     $('grid').innerHTML = items.map(i => `
       <button class="tile" type="button" data-id="${i.id}" ${i.soldOut ? 'disabled' : ''}>
-        <span class="tile-sw" style="background:linear-gradient(135deg, ${i.tone[0]}, ${i.tone[1]})">${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>
+        <span class="tile-sw">${BBC.art(i)}${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>
         <span class="tile-body"><b>${esc(i.name)}</b><span>${BB.peso(i.price)}</span></span>
       </button>`).join('') || '<p class="muted">No items match.</p>';
   }
