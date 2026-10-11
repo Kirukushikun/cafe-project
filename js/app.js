@@ -1307,42 +1307,127 @@ BBViews['home/index'] = function () {
 
 /* ===== login/login ===== */
 BBViews['login/login'] = function () {
-(function () {
   const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
   const params = new URLSearchParams(location.search);
+  const ROLE_NAME = BBS.ROLE_NAME;
+  // Where each role lands, and what each staff screen is called
   const HOME = { cashier: 'cashier.html', admin: 'admin.html', kitchen: 'kitchen.html', inventory: 'inventory.html' };
-  const ROLE_NAME = { admin: 'Owner / Admin', cashier: 'Cashier', kitchen: 'Kitchen', inventory: 'Stock clerk' };
+  const SCREEN = {
+    cashier: { pos: 'Point of sale', orders: 'Orders', payment: 'Take payment', receipt: 'Receipt' },
+    kitchen: { display: 'Kitchen display' },
+    inventory: { ingredients: 'Ingredients', alerts: 'Low-stock alerts', suppliers: 'Suppliers', 'purchase-orders': 'Purchase orders', wastage: 'Wastage & counts' },
+    admin: { dashboard: 'Dashboard', reports: 'Reports', menu: 'Menu & prices', recipes: 'Recipes & costing', promos: 'Promos & vouchers', loyalty: 'Loyalty', users: 'Users & roles', audit: 'Audit logs' }
+  };
+  const DEFAULT_VIEW = { cashier: 'pos', kitchen: 'display', inventory: 'ingredients', admin: 'dashboard' };
+  function screenName(url) {
+    const m = String(url).match(/^([a-z]+)\.html(?:\?(.*))?$/);
+    if (!m || !SCREEN[m[1]]) return '';
+    const view = new URLSearchParams(m[2] || '').get('view') || DEFAULT_VIEW[m[1]];
+    return SCREEN[m[1]][view] || '';
+  }
 
-  $('accts').innerHTML = BB_DATA.users.filter(u => u.active !== false).map(u => `
-    <button type="button" class="acct" data-u="${u.username}" data-p="${u.password}">
-      <span><b>${u.name}</b><small>${ROLE_NAME[u.role]}</small></span>
-      <code>${u.username} / ${u.password}</code>
+  const next = params.get('next');
+  const nextOk = next && /^[a-z]+\.html(\?[\w=&.-]*)?$/.test(next) ? next : null;
+  const dest = (user) => nextOk || HOME[user.role];
+
+  // ---- Shift board ----
+  const now = new Date();
+  const h = now.getHours();
+  $('today').textContent = now.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric' }) + ' · ' + now.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+  $('greet').innerHTML = `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}.<br><span>Good shift ahead.</span>`;
+  function renderShift() {
+    const orders = BB.orders.list();
+    const unpaid = orders.filter(BB.orders.unpaid).length;
+    const kitchen = orders.filter(o => ['paid', 'preparing', 'ready'].includes(o.status)).length;
+    const low = BB.inventory.ingredients().filter(i => BB.inventory.level(i) !== 'ok').length;
+    const tile = (n, label) => `<div class="${n ? 'hot' : ''}"><strong>${n}</strong><span>${label}</span></div>`;
+    $('shift').innerHTML = tile(unpaid, 'waiting for payment') + tile(kitchen, 'in the kitchen') + tile(low, 'low on stock');
+  }
+  BBS.onOrdersChange(renderShift);
+
+  // ---- Where they are headed ----
+  if (nextOk && screenName(nextOk)) {
+    $('context').hidden = false;
+    $('contextText').innerHTML = `Log in to open <b>${esc(screenName(nextOk))}</b>.`;
+  }
+
+  // ---- Already logged in ----
+  function showSignedIn() {
+    const s = BB.staff.current();
+    const signed = !!s;
+    $('signedIn').hidden = !signed;
+    $('form').hidden = signed;
+    document.querySelector('.demo').hidden = signed;
+    if (!signed) return;
+    const initials = s.name.split(' ').map(x => x[0]).slice(0, 2).join('');
+    const goName = screenName(dest(s)) || 'your screen';
+    $('signedIn').innerHTML = `
+      <div class="who"><span class="avatar" style="width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font:700 .85rem var(--display)">${esc(initials)}</span>
+        <span><b>You’re logged in as ${esc(s.name)}</b><br><small class="muted">${esc(ROLE_NAME[s.role])}</small></span></div>
+      <div class="row">
+        <a class="btn btn-primary" href="${dest(s)}">Continue to ${esc(goName)}</a>
+        <button class="btn btn-ghost" type="button" id="switchUser">Switch user</button>
+      </div>`;
+    $('switchUser').addEventListener('click', () => { BB.staff.logout(); showSignedIn(); $('username').focus(); });
+  }
+  showSignedIn();
+
+  // ---- Demo accounts ----
+  const users = BB_DATA.users.filter(u => u.active !== false);
+  $('accts').innerHTML = users.map(u => `
+    <button type="button" class="acct" data-u="${esc(u.username)}" data-p="${esc(u.password)}" aria-pressed="false">
+      <span class="avatar">${esc(u.name.split(' ').map(x => x[0]).slice(0, 2).join(''))}</span>
+      <b>${esc(u.name)}</b>
+      <small>${esc(ROLE_NAME[u.role])} · opens ${esc(screenName(HOME[u.role]))}</small>
+      <code>${esc(u.username)}</code>
     </button>`).join('');
   $('accts').addEventListener('click', (e) => {
     const b = e.target.closest('.acct');
     if (!b) return;
+    $('accts').querySelectorAll('.acct').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('username').value = b.dataset.u;
     $('password').value = b.dataset.p;
-    $('password').focus();
+    clearError();
+    $('submit').focus();
   });
 
-  // Coming from the navigator with ?role=cashier fills the first account with that role
-  const pre = BB_DATA.users.find(u => u.role === params.get('role'));
-  if (pre) $('username').value = pre.username;
+  // From the navigator with ?role=cashier: fill the username for that role
+  const pre = users.find(u => u.role === params.get('role'));
+  if (pre && !BB.staff.current()) $('username').value = pre.username;
+
+  // ---- Form ----
+  $('showPw').addEventListener('click', () => {
+    const show = $('password').type === 'password';
+    $('password').type = show ? 'text' : 'password';
+    $('showPw').textContent = show ? 'Hide' : 'Show';
+    $('showPw').setAttribute('aria-pressed', String(show));
+  });
+
+  function showError(msg, field) {
+    $('errText').textContent = msg;
+    $('err').hidden = false;
+    ['username', 'password'].forEach(id => $(id).setAttribute('aria-invalid', String(id === field || field === 'both')));
+    $(field === 'password' ? 'password' : 'username').focus();
+  }
+  function clearError() {
+    $('err').hidden = true;
+    ['username', 'password'].forEach(id => $(id).removeAttribute('aria-invalid'));
+  }
+  ['username', 'password'].forEach(id => $(id).addEventListener('input', clearError));
 
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
+    if (!$('username').value.trim()) return showError('Enter your username.', 'username');
+    if (!$('password').value) return showError('Enter your password.', 'password');
     const user = BB.staff.login($('username').value, $('password').value);
-    if (!user) {
-      $('err').textContent = 'Wrong username or password, or the account is disabled. Use one of the demo accounts below.';
-      $('err').hidden = false;
-      return;
-    }
-    const next = params.get('next');
-    const nextOk = next && /^[a-z]+\.html(\?[\w=&.-]*)?$/.test(next);
-    location.href = nextOk ? next : HOME[user.role];
+    if (!user) return showError('That username and password don’t match an active account. Check them, or pick a demo account below.', 'both');
+    $('submit').textContent = 'Opening ' + (screenName(dest(user)) || 'your screen') + '…';
+    $('submit').disabled = true;
+    location.href = dest(user);
   });
-})();
+
+  if (!BB.staff.current()) $(pre ? 'password' : 'username').focus();
 };
 
 /* ===== customer/menu ===== */
