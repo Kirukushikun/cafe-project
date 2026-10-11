@@ -2933,17 +2933,15 @@ BBViews['inventory/ingredients'] = function () {
       const pct = Math.max(0, Math.min(100, i.stock / (i.reorder * 2 || 1) * 100));
       const sup = I.supplier(i.supplier);
       return `<tr>
-        <td><b>${esc(i.name)}</b><small>Used in ${I.usedIn(i.id).length} menu item(s)</small></td>
-        <td>${esc(i.cat)}</td>
+        <td class="name-cell"><b>${esc(i.name)}</b><small>${esc(i.cat)} · ${(n => n ? `used in ${n} item${n === 1 ? '' : 's'}` : 'used in add-ons')(I.usedIn(i.id).length)}</small></td>
         <td><div class="lvl"><span class="num">${I.fmt(i.stock, i.unit)}</span><span class="lvl-bar"><i class="${lv}" style="width:${pct}%"></i></span></div></td>
         <td class="r num">${I.fmt(i.reorder, i.unit)}</td>
-        <td class="r mono" style="font-size:.82rem">${costText(i.cost, i.unit)}</td>
-        <td class="r num">${BB.peso(Math.max(0, i.stock) * i.cost, true)}</td>
-        <td>${sup ? esc(sup.name) : '<span class="muted">None</span>'}</td>
+        <td class="r num">${BB.peso(Math.max(0, i.stock) * i.cost, true)}<small class="mono">${costText(i.cost, i.unit)}</small></td>
+        <td class="sup-cell" title="${sup ? esc(sup.name) : ''}">${sup ? esc(sup.name) : '<span class="muted">None</span>'}</td>
         <td><span class="chip ${LEVEL[lv][1]}">${LEVEL[lv][0]}</span></td>
         <td class="r" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" data-hist="${i.id}">History</button> <button class="btn btn-ghost btn-sm" data-edit="${i.id}">Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="9" class="empty-row">No ingredients match.</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty-row">No ingredients match.</td></tr>';
   }
 
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; render(); } });
@@ -3011,7 +3009,7 @@ BBViews['inventory/ingredients'] = function () {
     $('histBody').innerHTML = `
       <div class="toolbar"><span class="chip ${LEVEL[I.level(ing)][1]}">${LEVEL[I.level(ing)][0]}</span>
         <span>On hand <b>${I.fmt(ing.stock, ing.unit)}</b> · reorder at ${I.fmt(ing.reorder, ing.unit)}</span></div>
-      <div><div class="lbl" style="margin-bottom:6px">Used in</div><div class="used">${used.length ? used.map(m => `<span class="chip chip-green">${esc(m.name)}</span>`).join('') : '<span class="muted">Add-ons only, or not in any recipe yet</span>'}</div></div>
+      <div><div class="lbl" style="margin-bottom:6px">Used in</div><div class="used">${used.length ? used.map(m => `<span class="chip chip-muted">${esc(m.name)}</span>`).join('') : '<span class="muted">Add-ons only, or not in any recipe yet</span>'}</div></div>
       <div class="tbl-wrap" style="border:1px solid var(--line);border-radius:8px">
         <table class="tbl"><thead><tr><th>When</th><th>What</th><th>Reference</th><th class="r">Change</th><th class="r">Balance</th><th>By</th></tr></thead>
         <tbody>${moves.length ? moves.map(m => `<tr>
@@ -3220,7 +3218,7 @@ BBViews['inventory/purchase-orders'] = function () {
   const $ = (id) => document.getElementById(id);
   const esc = BBC.esc;
   const p2 = (n) => BB.peso(n, true);
-  const STATUS = { draft: ['Draft', ''], sent: ['Sent', 'chip-gcash'], received: ['Received', 'chip-green'], cancelled: ['Cancelled', 'chip-red'] };
+  const STATUS = { draft: ['Draft', 'chip-muted'], sent: ['Sent', 'chip-gcash'], received: ['Received', 'chip-green'], cancelled: ['Cancelled', 'chip-red'] };
   const dateOnly = (iso) => new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
   const poTotal = (po) => po.items.reduce((n, x) => n + (po.status === 'received' && x.received != null ? x.received : x.qty) * x.cost, 0);
   const overdue = (po) => po.status === 'sent' && po.expectedAt && new Date(po.expectedAt) < new Date(new Date().toDateString());
@@ -3251,7 +3249,7 @@ BBViews['inventory/purchase-orders'] = function () {
         <td>${dateOnly(p.createdAt)}</td>
         <td>${p.expectedAt ? dateOnly(p.expectedAt) : '—'}${overdue(p) ? '<small style="color:var(--danger)">Overdue</small>' : ''}${p.receivedAt ? `<small>Received ${dateOnly(p.receivedAt)}</small>` : ''}</td>
         <td class="r num">${p2(poTotal(p))}</td>
-        <td><span class="chip ${STATUS[p.status][1]}" style="${p.status === 'draft' ? 'background:var(--sunk)' : ''}">${STATUS[p.status][0]}</span></td>
+        <td><span class="chip ${STATUS[p.status][1]}">${STATUS[p.status][0]}</span></td>
         <td class="r"><button class="btn ${p.status === 'sent' ? 'btn-primary' : 'btn-ghost'} btn-sm" data-view="${p.id}">${p.status === 'sent' ? 'Receive' : 'View'}</button></td>
       </tr>`;
     }).join('') || `<tr><td colspan="8" class="empty-row">${tab === 'open' ? 'No open purchase orders. Low-stock alerts can create one for you.' : 'Nothing here yet.'}</td></tr>`;
