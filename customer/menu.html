@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Menu · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/customer.css">
+</head>
+<body class="customer">
+
+<!-- Shown when the page is opened without scanning a table or counter QR -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V4a1 1 0 0 1 1-1h3M17 3h3a1 1 0 0 1 1 1v3M21 17v3a1 1 0 0 1-1 1h-3M7 21H4a1 1 0 0 1-1-1v-3"/><rect x="7" y="7" width="4" height="4"/><rect x="13" y="7" width="4" height="4"/><rect x="7" y="13" width="4" height="4"/><path d="M13 13h4v4"/></svg>
+    <h1>Scan the QR code on your table</h1>
+    <p class="muted">Each table has its own QR code so we know where to bring your order. For take-out, scan the QR code at the counter.</p>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+  <header class="c-head">
+    <div class="c-head-row">
+      <span class="brand"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite Café</span></span>
+      <span class="session-pill" id="sessionPill"></span>
+    </div>
+    <h1>What are you craving today?</h1>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" type="search" placeholder="Search drinks, meals, pastries" autocomplete="off" aria-label="Search the menu">
+    </div>
+  </header>
+
+  <nav class="cat-bar" id="catBar" aria-label="Menu categories"></nav>
+
+  <div class="promo" id="promo"></div>
+
+  <main id="menu"></main>
+  <p class="empty-search" id="noResults" hidden>No items match your search.</p>
+</div>
+
+<div class="cart-bar" id="cartBar" hidden>
+  <a href="cart.html">
+    <span><span class="cart-count" id="cartCount">0</span>View your order</span>
+    <span class="num" id="cartTotal">₱0</span>
+  </a>
+</div>
+
+<!-- Item detail sheet -->
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<form class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="sheetTitle">
+  <div class="sheet-scroll">
+    <div class="sheet-hero" id="sheetHero">
+      <button class="sheet-close" type="button" id="sheetClose" aria-label="Close">×</button>
+    </div>
+    <div class="sheet-info">
+      <h2 id="sheetTitle"></h2>
+      <p id="sheetDesc"></p>
+      <span class="m-price" id="sheetBase"></span>
+    </div>
+    <div id="sheetOptions"></div>
+    <div class="notes">
+      <label for="sheetNotes">Notes for the kitchen <span class="muted" style="font-weight:400">(optional)</span></label>
+      <textarea id="sheetNotes" maxlength="120" placeholder="e.g. less ice, no onions"></textarea>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <div class="stepper">
+      <button type="button" id="qtyMinus" aria-label="Decrease quantity">−</button>
+      <output id="qty">1</output>
+      <button type="button" id="qtyPlus" aria-label="Increase quantity">+</button>
+    </div>
+    <button class="btn btn-primary" type="submit" id="sheetAdd">Add to order</button>
+  </div>
+</form>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script>
+(function () {
+  const D = window.BB_DATA;
+  const $ = (id) => document.getElementById(id);
+
+  const ICONS = {
+    cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M9 3c0 1.5 1 1.5 1 3M13 3c0 1.5 1 1.5 1 3"/></svg>',
+    tea: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1.5 13a1 1 0 0 1-1 .9h-7a1 1 0 0 1-1-.9z"/><path d="M5 7h14M13 7l2-5"/><circle cx="10" cy="17" r=".8" fill="currentColor"/><circle cx="13" cy="15.5" r=".8" fill="currentColor"/><circle cx="12" cy="18" r=".8" fill="currentColor"/></svg>',
+    bowl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 11c0-2 1.5-3 4-3s4 1 4 3M7 4c.5 1 .5 2 0 3M12 3c.5 1 .5 2 0 3M17 4c.5 1 .5 2 0 3"/></svg>',
+    bread: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15c0-5 3.6-9 8-9s8 4 8 9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 9l1.5 3M12 8v4M15 9l-1.5 3"/></svg>'
+  };
+  const catOf = (item) => D.categories.find(c => c.id === item.cat);
+  const tone = (item) => `background: linear-gradient(135deg, ${item.tone[0]}, ${item.tone[1]})`;
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ---- Session from the scanned QR code ----
+  const params = new URLSearchParams(location.search);
+  const tableParam = parseInt(params.get('table'), 10);
+  let session = BB.session.get();
+
+  if (tableParam >= 1 && tableParam <= D.cafe.tables) {
+    const next = { type: 'dine-in', table: tableParam };
+    if (!session || session.type !== next.type || session.table !== next.table) BB.cart.clear();
+    session = next;
+    BB.session.set(session);
+  } else if (params.get('type') === 'takeout') {
+    if (!session || session.type !== 'take-out') BB.cart.clear();
+    session = { type: 'take-out', table: null };
+    BB.session.set(session);
+  }
+
+  if (!session) { $('gate').hidden = false; return; }
+  $('app').hidden = false;
+  $('sessionPill').textContent = session.type === 'dine-in' ? `TABLE ${session.table} · DINE-IN` : 'TAKE-OUT';
+
+  // ---- Promo ----
+  $('promo').innerHTML = `<span>${esc(D.promo.text)}. Use code at checkout.</span><code>${esc(D.promo.code)}</code>`;
+
+  // ---- Categories and menu ----
+  $('catBar').innerHTML = D.categories.map(c => `<button type="button" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
+
+  $('menu').innerHTML = D.categories.map(c => {
+    const rows = D.items.filter(i => i.cat === c.id).map(i => `
+      <button class="m-item" type="button" data-item="${i.id}" data-search="${esc((i.name + ' ' + i.desc).toLowerCase())}" ${i.soldOut ? 'disabled' : ''}>
+        <span class="thumb" style="${tone(i)}">${ICONS[c.icon]}</span>
+        <span class="m-body">
+          <span class="m-name">${esc(i.name)}</span>
+          ${i.tags || i.soldOut ? `<span class="tags">${(i.tags || []).map(t => `<span class="chip ${t === 'New' ? 'chip-gcash' : 'chip-caramel'}">${t}</span>`).join('')}${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>` : ''}
+          <span class="m-desc">${esc(i.desc)}</span>
+          <span class="m-foot">
+            <span class="m-price">${hasPriceRange(i) ? 'from ' : ''}${BB.peso(i.price)}</span>
+            ${i.soldOut ? '' : '<span class="m-add" aria-hidden="true">+</span>'}
+          </span>
+        </span>
+      </button>`).join('');
+    return `<section class="menu-section" id="sec-${c.id}" data-cat="${c.id}"><h2>${esc(c.name)}</h2><div class="menu-list">${rows}</div></section>`;
+  }).join('');
+
+  function hasPriceRange(item) {
+    return (item.options || []).some(g => g.choices.some(ch => ch.price > 0));
+  }
+
+  // Category chips scroll to their section; the visible section highlights its chip
+  const chips = [...$('catBar').querySelectorAll('button')];
+  function setActive(cat) {
+    chips.forEach(b => {
+      const on = b.dataset.cat === cat;
+      b.classList.toggle('on', on);
+      if (on) b.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    });
+  }
+  chips.forEach(b => b.addEventListener('click', () => {
+    $('sec-' + b.dataset.cat).scrollIntoView({ behavior: 'smooth' });
+    setActive(b.dataset.cat);
+  }));
+  setActive(D.categories[0].id);
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) setActive(e.target.dataset.cat); });
+  }, { rootMargin: '-60px 0px -70% 0px' });
+  document.querySelectorAll('.menu-section').forEach(s => observer.observe(s));
+
+  // ---- Search ----
+  $('search').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('.menu-section').forEach(sec => {
+      let inSec = 0;
+      sec.querySelectorAll('.m-item').forEach(row => {
+        const match = !q || row.dataset.search.includes(q);
+        row.hidden = !match;
+        if (match) inSec++;
+      });
+      sec.hidden = inSec === 0;
+      shown += inSec;
+    });
+    $('noResults').hidden = shown > 0;
+  });
+
+  // ---- Item detail sheet ----
+  let current = null;
+  let qty = 1;
+
+  $('menu').addEventListener('click', (e) => {
+    const row = e.target.closest('.m-item');
+    if (row && !row.disabled) openSheet(row.dataset.item);
+  });
+
+  function openSheet(id) {
+    current = D.items.find(i => i.id === id);
+    qty = 1;
+    $('qty').textContent = qty;
+    $('sheetNotes').value = '';
+    $('sheetHero').style.cssText = tone(current);
+    $('sheetHero').querySelectorAll('svg').forEach(s => s.remove());
+    $('sheetHero').insertAdjacentHTML('beforeend', ICONS[catOf(current).icon]);
+    $('sheetTitle').textContent = current.name;
+    $('sheetDesc').textContent = current.desc;
+    $('sheetBase').textContent = BB.peso(current.price);
+
+    $('sheetOptions').innerHTML = (current.options || []).map(g => {
+      const isSingle = g.type === 'single';
+      const pills = isSingle && g.choices.length > 3;
+      const def = g.defaultChoice || g.choices[0].id;
+      const opts = g.choices.map(ch => `
+        <label class="opt">
+          <input type="${isSingle ? 'radio' : 'checkbox'}" name="${g.id}" value="${ch.id}" ${isSingle && ch.id === def ? 'checked' : ''}>
+          <span>${esc(ch.name)}</span>
+          ${ch.price ? `<em>+${BB.peso(ch.price)}</em>` : ''}
+        </label>`).join('');
+      return `<fieldset class="opt-group"><legend>${esc(g.name)}<small>${g.required ? 'Required' : 'Optional'}</small></legend><div class="opt-list${pills ? ' pills' : ''}">${opts}</div></fieldset>`;
+    }).join('');
+
+    updateTotal();
+    $('sheet').hidden = false;
+    $('sheetBackdrop').hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('sheetClose').focus();
+  }
+
+  function closeSheet() {
+    $('sheet').hidden = true;
+    $('sheetBackdrop').hidden = true;
+    document.body.style.overflow = '';
+  }
+
+  function selectedOptions() {
+    const picked = [];
+    (current.options || []).forEach(g => {
+      $('sheet').querySelectorAll(`input[name="${g.id}"]:checked`).forEach(inp => {
+        const ch = g.choices.find(c => c.id === inp.value);
+        picked.push({ groupId: g.id, group: g.name, id: ch.id, name: ch.name, price: ch.price });
+      });
+    });
+    return picked;
+  }
+
+  function unitPrice() {
+    return current.price + selectedOptions().reduce((n, o) => n + o.price, 0);
+  }
+
+  function updateTotal() {
+    $('sheetAdd').textContent = `Add to order · ${BB.peso(unitPrice() * qty)}`;
+  }
+
+  $('sheetOptions').addEventListener('change', updateTotal);
+  $('qtyMinus').addEventListener('click', () => { if (qty > 1) { qty--; $('qty').textContent = qty; updateTotal(); } });
+  $('qtyPlus').addEventListener('click', () => { if (qty < 20) { qty++; $('qty').textContent = qty; updateTotal(); } });
+  $('sheetClose').addEventListener('click', closeSheet);
+  $('sheetBackdrop').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('sheet').hidden) closeSheet(); });
+
+  $('sheet').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const options = selectedOptions();
+    BB.cart.add({
+      key: current.id + '|' + options.map(o => o.groupId + ':' + o.id).join(','),
+      itemId: current.id,
+      name: current.name,
+      basePrice: current.price,
+      unitPrice: unitPrice(),
+      options,
+      notes: $('sheetNotes').value.trim(),
+      qty
+    });
+    closeSheet();
+    renderCartBar();
+    toast(`Added ${qty} × ${current.name}`);
+  });
+
+  // ---- Cart bar and toast ----
+  function renderCartBar() {
+    const count = BB.cart.count();
+    $('cartBar').hidden = count === 0;
+    $('cartCount').textContent = count;
+    $('cartTotal').textContent = BB.peso(BB.cart.total());
+  }
+  renderCartBar();
+
+  let toastTimer;
+  function toast(msg) {
+    let el = document.querySelector('.toast-pop');
+    if (!el) { el = document.createElement('div'); el.className = 'toast-pop'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 2200);
+  }
+})();
+</script>
+</body>
+</html>
