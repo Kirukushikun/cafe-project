@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orders · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+    .kpi { background: var(--surface); padding: 14px 16px; display: grid; gap: 2px; }
+    .kpi small { color: var(--muted); font-size: .8rem; }
+    .kpi strong { font: 700 1.4rem var(--display); font-variant-numeric: tabular-nums; }
+    .kpi.alert strong { color: var(--danger); }
+    .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+    tr.waiting td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+    .items-cell { max-width: 280px; }
+    @media (max-width: 800px) { .kpis { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Orders</h1><div class="sub">QR and counter orders · updates automatically</div></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="clock" id="clock"></span><a class="btn btn-primary btn-sm" href="pos.html">+ New counter order</a></div>
+    </header>
+
+    <div class="work-body">
+      <div class="kpis" id="kpis"></div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="tabs" id="tabs"></div>
+          <input class="input" id="search" type="search" placeholder="Search order no. or name" style="max-width:240px" aria-label="Search orders">
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>Order</th><th>Type</th><th>Items</th><th class="r">Total</th><th>Payment</th><th>Status</th><th class="r">Actions</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel / void modal -->
+<div class="modal-back" id="modalBack" hidden>
+  <form class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-head"><h2 id="mTitle"></h2><button type="button" class="x-btn" id="mClose" aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <p id="mText" class="muted" style="font-size:.9rem"></p>
+      <label class="lbl">Reason
+        <select class="input" id="mReason">
+          <option>Customer changed their mind</option>
+          <option>Wrong item entered</option>
+          <option>Item out of stock</option>
+          <option>Duplicate order</option>
+          <option>Customer left without paying</option>
+        </select>
+      </label>
+      <p class="err" id="mErr" hidden style="color:var(--danger);font-size:.85rem"></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="mCancel">Keep order</button>
+      <button type="submit" class="btn btn-danger" id="mOk"></button>
+    </div>
+  </form>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['cashier'], 'orders');
+  if (!user) return;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+  const METHOD = { GCASH: 'GCash', MAYA: 'Maya', CASH: 'Cash' };
+
+  const TABS = [
+    { id: 'awaiting', label: 'Awaiting payment', test: o => o.status === 'awaiting_payment' },
+    { id: 'active', label: 'In progress', test: o => ['paid', 'preparing', 'ready'].includes(o.status) },
+    { id: 'done', label: 'Completed', test: o => o.status === 'completed' },
+    { id: 'cancelled', label: 'Cancelled / voided', test: o => ['cancelled', 'voided'].includes(o.status) },
+    { id: 'all', label: 'All', test: () => true }
+  ];
+  let tab = location.hash === '#active' ? 'active' : 'awaiting';
+
+  function render() {
+    const all = BB.orders.list();
+    const today = BB.ymd();
+    const todays = all.filter(o => BB.ymd(new Date(o.createdAt)) === today);
+    const paidToday = BB.payments.list().filter(p => p.status === 'PAID' && BB.ymd(new Date(p.paidAt)) === today);
+    const sales = paidToday.reduce((n, p) => n + p.amount, 0);
+    const cash = paidToday.filter(p => p.method === 'CASH').reduce((n, p) => n + p.amount, 0);
+    const waiting = all.filter(o => o.status === 'awaiting_payment').length;
+
+    $('kpis').innerHTML = `
+      <div class="kpi${waiting ? ' alert' : ''}"><small>Awaiting payment</small><strong>${waiting}</strong></div>
+      <div class="kpi"><small>Orders today</small><strong>${todays.length}</strong></div>
+      <div class="kpi"><small>Sales today</small><strong>${BB.peso(sales, true)}</strong></div>
+      <div class="kpi"><small>Cash in drawer (today)</small><strong>${BB.peso(cash, true)}</strong></div>`;
+
+    $('tabs').innerHTML = TABS.map(t => `<button type="button" data-tab="${t.id}" class="${t.id === tab ? 'on' : ''}">${t.label}<span class="n">${all.filter(t.test).length}</span></button>`).join('');
+
+    const q = $('search').value.trim().toLowerCase();
+    const t = TABS.find(x => x.id === tab);
+    const rows = all.filter(t.test)
+      .filter(o => !q || o.orderNo.toLowerCase().includes(q) || (o.customer.name || '').toLowerCase().includes(q))
+      .sort((a, b) => tab === 'awaiting' ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt));
+
+    $('rows').innerHTML = rows.length ? rows.map(o => {
+      const st = BB.STATUS[o.status];
+      const items = o.items.map(l => `${l.qty}× ${l.name}`).join(', ');
+      const pay = o.paidAt ? `${METHOD[o.method]}<small class="mono">${o.paymentRef}</small>` : o.method ? `<span class="muted">${METHOD[o.method]} · unpaid</span>` : '<span class="muted">Not yet</span>';
+      let acts = '';
+      if (o.status === 'awaiting_payment') acts = `<a class="btn btn-primary btn-sm" href="payment.html?order=${o.id}">Take payment</a><button class="btn btn-danger btn-sm" data-act="cancel" data-id="${o.id}">Cancel</button>`;
+      else if (o.status === 'ready') acts = `<button class="btn btn-primary btn-sm" data-act="serve" data-id="${o.id}">${o.type === 'dine-in' ? 'Mark served' : o.type === 'delivery' ? 'Mark delivered' : 'Mark picked up'}</button><a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
+      else if (['paid', 'preparing'].includes(o.status)) acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a><button class="btn btn-danger btn-sm" data-act="void" data-id="${o.id}">Void</button>`;
+      else if (o.status === 'completed') acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
+      else if (o.status === 'voided') acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
+      return `<tr class="${o.status === 'awaiting_payment' ? 'waiting' : ''}">
+        <td><b class="mono">${o.orderNo}</b><small>${BBS.ago(o.createdAt)}${o.customer.name ? ' · ' + esc(o.customer.name) : ''}</small></td>
+        <td>${BBC.orderTypeLabel(o)}<small>${o.source === 'pos' ? 'Counter' : 'QR order'}</small></td>
+        <td class="items-cell">${esc(items)}${o.senior ? `<small>${o.senior.type} discount</small>` : ''}${o.cancelReason ? `<small>${esc(o.cancelReason)}</small>` : ''}</td>
+        <td class="r mono">${BB.peso(o.total, true)}</td>
+        <td>${pay}</td>
+        <td><span class="chip ${st.chip}">${st.label}</span></td>
+        <td><div class="acts">${acts}</div></td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="7" class="empty-row">${tab === 'awaiting' ? 'No orders waiting for payment.' : 'No orders here yet.'}</td></tr>`;
+  }
+
+  $('tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    tab = b.dataset.tab;
+    render();
+  });
+  $('search').addEventListener('input', render);
+
+  // ---- Row actions ----
+  let pending = null;
+  $('rows').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const o = BB.orders.get(b.dataset.id);
+    if (b.dataset.act === 'serve') {
+      BB.orders.update(o.id, { status: 'completed' });
+      BB.audit.log('Completed order', `${o.orderNo} · ${o.type}`);
+      render();
+      return;
+    }
+    pending = { act: b.dataset.act, order: o };
+    const isVoid = pending.act === 'void';
+    $('mTitle').textContent = `${isVoid ? 'Void' : 'Cancel'} ${o.orderNo}?`;
+    $('mText').textContent = isVoid
+      ? `This order was already paid (${BB.peso(o.total, true)} by ${METHOD[o.method]}). Voiding marks the payment as voided, removes it from sales and reverses loyalty points. Return the money to the customer.`
+      : 'The order is removed from the queue. Nothing has been paid yet.';
+    $('mOk').textContent = isVoid ? 'Void order' : 'Cancel order';
+    $('modalBack').hidden = false;
+    $('mReason').focus();
+  });
+
+  const close = () => { $('modalBack').hidden = true; pending = null; };
+  $('mClose').addEventListener('click', close);
+  $('mCancel').addEventListener('click', close);
+  $('modalBack').addEventListener('click', (e) => { if (e.target === $('modalBack')) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modalBack').hidden) close(); });
+
+  $('modal').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!pending) return;
+    const reason = $('mReason').value;
+    const o = BB.orders.get(pending.order.id);
+    if (pending.act === 'void') {
+      BB.payments.voidOrder(o, reason);
+      BBC.toast(`${o.orderNo} voided`);
+    } else {
+      if (o.pointsUsed) BB.loyalty.add(o.customer.mobile, o.customer.name, o.pointsUsed);
+      BB.orders.update(o.id, { status: 'cancelled', cancelReason: reason });
+      BB.audit.log('Cancelled order', `${o.orderNo} · ${reason}`);
+      BBC.toast(`${o.orderNo} cancelled`);
+    }
+    close();
+    render();
+  });
+
+  BBS.onOrdersChange(render);
+  setInterval(render, 30000); // keep "x min ago" fresh
+})();
+</script>
+</body>
+</html>

@@ -116,6 +116,16 @@
       { code: 'SWEETSEPT', label: '15% off', kind: 'percent', value: 15, minSpend: 0, active: false }
     ],
     delivery: { fee: 50, area: 'Within Tarlac City only' },
+    // Staff accounts (demo passwords are shown on the login screen)
+    users: [
+      { id: 'u1', name: 'Maria Dizon', username: 'admin', password: 'admin123', role: 'admin' },
+      { id: 'u2', name: 'Jessa Manalo', username: 'cashier', password: 'cashier123', role: 'cashier' },
+      { id: 'u3', name: 'Mark Bautista', username: 'cashier2', password: 'cashier123', role: 'cashier' },
+      { id: 'u4', name: 'Ramon Cruz', username: 'kitchen', password: 'kitchen123', role: 'kitchen' },
+      { id: 'u5', name: 'Liza Garcia', username: 'stock', password: 'stock123', role: 'inventory' }
+    ],
+    // Senior citizen / PWD: VAT-exempt, then 20% off the eligible share
+    seniorPwd: { percent: 20, vat: 0.12 },
     // Loyalty: earn 1 point per ₱50 paid, 1 point = ₱1 off. Sample members:
     loyalty: { pesoPerPoint: 50, minRedeem: 20, members: { '09171234567': { name: 'Andrea Santos', points: 86 }, '09981112222': { name: 'Paolo Reyes', points: 24 } } },
     categories,

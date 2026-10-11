@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Point of Sale · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .pos { display: grid; grid-template-columns: 1fr 380px; gap: 16px; align-items: start; }
+    .pos-menu { display: grid; gap: 12px; min-width: 0; }
+    .pos-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .pos-tools .input { max-width: 260px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .tile {
+      display: grid; grid-template-rows: 64px auto; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+      background: var(--surface); cursor: pointer; text-align: left; font: inherit; color: var(--ink); padding: 0;
+    }
+    .tile:hover { border-color: var(--accent); }
+    .tile:focus-visible { outline: 3px solid var(--accent-soft); }
+    .tile[disabled] { opacity: .5; cursor: not-allowed; }
+    .tile-body { padding: 8px 10px 10px; display: grid; gap: 2px; }
+    .tile-body b { font-size: .9rem; line-height: 1.25; font-weight: 600; }
+    .tile-body span { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+    .tile-sw { display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px; }
+
+    .ticket { position: sticky; top: 16px; display: grid; grid-template-rows: auto 1fr auto; max-height: calc(100vh - 110px); }
+    .ticket-sec { padding: 12px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+    .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--sunk); padding: 3px; border-radius: 9px; }
+    .seg label { text-align: center; padding: 7px; border-radius: 7px; cursor: pointer; font-weight: 500; font-size: .88rem; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg label:has(input:checked) { background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .seg label:has(input:focus-visible) { outline: 3px solid var(--accent-soft); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .lines { overflow-y: auto; padding: 4px 16px; min-height: 120px; }
+    .tl { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .tl:last-child { border-bottom: 0; }
+    .tl b { font-weight: 600; font-size: .92rem; }
+    .tl small { display: block; color: var(--muted); font-size: .78rem; line-height: 1.35; }
+    .tl .amt { font-family: var(--mono); font-size: .88rem; text-align: right; }
+    .tl .qty-row button { width: 28px; height: 28px; font-size: .95rem; }
+    .tl .rm { background: none; border: 0; color: var(--danger); font: 500 .8rem var(--body); cursor: pointer; justify-self: end; }
+    .no-lines { padding: 32px 8px; text-align: center; color: var(--muted); font-size: .9rem; }
+    .ticket-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: grid; gap: 10px; background: var(--surface); border-radius: 0 0 var(--radius) var(--radius); }
+    .totals { display: grid; gap: 4px; font-size: .9rem; }
+    .totals div { display: flex; justify-content: space-between; }
+    .totals span:last-child { font-variant-numeric: tabular-nums; }
+    .totals .big { font-weight: 700; font-size: 1.15rem; padding-top: 6px; border-top: 1px dashed var(--line); margin-top: 4px; }
+    .totals .minus span:last-child { color: var(--accent); }
+    .vmsg { font-size: .8rem; }
+    .vmsg.bad { color: var(--danger); }
+    .vmsg.ok { color: var(--accent); }
+    .foot-btns { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+    .foot-btns .btn-primary { padding: 13px; font-size: 1rem; }
+    @media (max-width: 1100px) { .pos { grid-template-columns: 1fr; } .ticket { position: static; max-height: none; } }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Point of sale</h1><div class="sub">Walk-in and counter orders</div></div>
+      <span class="clock" id="clock"></span>
+    </header>
+
+    <div class="work-body">
+      <div class="pos">
+        <section class="pos-menu">
+          <div class="pos-tools">
+            <input class="input" id="search" type="search" placeholder="Search items" aria-label="Search items">
+            <div class="tabs" id="cats"></div>
+          </div>
+          <div class="grid" id="grid"></div>
+        </section>
+
+        <aside class="panel ticket">
+          <div>
+            <div class="ticket-sec">
+              <div class="seg" role="radiogroup" aria-label="Order type">
+                <label><input type="radio" name="type" value="take-out" checked> Take-out</label>
+                <label><input type="radio" name="type" value="dine-in"> Dine-in</label>
+              </div>
+              <div class="two">
+                <label class="lbl" id="tableWrap" hidden>Table<select class="input" id="table"></select></label>
+                <label class="lbl">Customer name<input class="input" id="custName" placeholder="Optional"></label>
+                <label class="lbl">Mobile (points)<input class="input" id="custMobile" inputmode="numeric" maxlength="11" placeholder="09XXXXXXXXX"></label>
+              </div>
+            </div>
+          </div>
+          <div class="lines" id="lines"></div>
+          <div class="ticket-foot">
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px">
+              <input class="input" id="voucher" placeholder="Voucher code" aria-label="Voucher code">
+              <button class="btn btn-ghost btn-sm" type="button" id="applyV">Apply</button>
+            </div>
+            <div class="vmsg" id="vmsg"></div>
+            <div class="totals" id="totals"></div>
+            <div class="foot-btns">
+              <button class="btn btn-ghost" type="button" id="clear">Clear</button>
+              <button class="btn btn-primary" type="button" id="charge" disabled>Charge</button>
+            </div>
+            <small class="muted" style="font-size:.76rem">Senior citizen and PWD discounts are applied on the payment screen.</small>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Item options modal -->
+<div class="modal-back" id="modalBack" hidden>
+  <form class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="modal-head"><h2 id="mTitle"></h2><button type="button" class="x-btn" id="mClose" aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <div id="mOpts" style="display:grid;gap:14px"></div>
+      <label class="lbl">Notes for the kitchen<input class="input" id="mNotes" maxlength="120" placeholder="e.g. less ice"></label>
+      <div class="qty-row"><span class="lbl" style="margin-right:6px">Quantity</span>
+        <button type="button" id="mMinus" aria-label="Decrease">−</button><output id="mQty">1</output><button type="button" id="mPlus" aria-label="Increase">+</button></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" id="mCancel">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="mAdd">Add</button>
+    </div>
+  </form>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['cashier'], 'pos');
+  if (!user) return;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+
+  // ---- POS ticket kept in storage so a refresh doesn't lose it ----
+  const ticket = {
+    lines: () => BB.get('posCart', []),
+    save: (l) => BB.set('posCart', l)
+  };
+  let voucher = null;
+  let activeCat = 'all';
+
+  // ---- Menu grid ----
+  $('cats').innerHTML = `<button type="button" data-cat="all" class="on">All</button>` +
+    D.categories.map(c => `<button type="button" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
+  $('cats').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    activeCat = b.dataset.cat;
+    $('cats').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    renderGrid();
+  });
+  $('search').addEventListener('input', renderGrid);
+
+  function renderGrid() {
+    const q = $('search').value.trim().toLowerCase();
+    const items = D.items.filter(i => (activeCat === 'all' || i.cat === activeCat) && (!q || i.name.toLowerCase().includes(q)));
+    $('grid').innerHTML = items.map(i => `
+      <button class="tile" type="button" data-id="${i.id}" ${i.soldOut ? 'disabled' : ''}>
+        <span class="tile-sw" style="background:linear-gradient(135deg, ${i.tone[0]}, ${i.tone[1]})">${i.soldOut ? '<span class="chip chip-red">Sold out</span>' : ''}</span>
+        <span class="tile-body"><b>${esc(i.name)}</b><span>${BB.peso(i.price)}</span></span>
+      </button>`).join('') || '<p class="muted">No items match.</p>';
+  }
+  $('grid').addEventListener('click', (e) => {
+    const t = e.target.closest('.tile');
+    if (!t || t.disabled) return;
+    const item = D.items.find(i => i.id === t.dataset.id);
+    if (item.options && item.options.length) openModal(item);
+    else addLine(item, [], '', 1);
+  });
+
+  // ---- Options modal ----
+  let mItem = null, mQty = 1;
+  function openModal(item) {
+    mItem = item; mQty = 1;
+    $('mTitle').textContent = `${item.name} · ${BB.peso(item.price)}`;
+    $('mNotes').value = '';
+    $('mQty').textContent = 1;
+    $('mOpts').innerHTML = item.options.map(g => {
+      const single = g.type === 'single';
+      const def = g.defaultChoice || g.choices[0].id;
+      return `<fieldset class="og"><legend>${esc(g.name)}<small>${g.required ? 'Required' : 'Optional'}</small></legend><div class="og-list">
+        ${g.choices.map(ch => `<label class="og-opt"><input type="${single ? 'radio' : 'checkbox'}" name="${g.id}" value="${ch.id}" ${single && ch.id === def ? 'checked' : ''}>${esc(ch.name)}${ch.price ? ` <em>+${ch.price}</em>` : ''}</label>`).join('')}
+      </div></fieldset>`;
+    }).join('');
+    updateModal();
+    $('modalBack').hidden = false;
+    $('modal').querySelector('input').focus();
+  }
+  function picked() {
+    const out = [];
+    mItem.options.forEach(g => $('modal').querySelectorAll(`input[name="${g.id}"]:checked`).forEach(inp => {
+      const ch = g.choices.find(c => c.id === inp.value);
+      out.push({ groupId: g.id, group: g.name, id: ch.id, name: ch.name, price: ch.price });
+    }));
+    return out;
+  }
+  function updateModal() {
+    const unit = mItem.price + picked().reduce((n, o) => n + o.price, 0);
+    $('mAdd').textContent = `Add · ${BB.peso(unit * mQty)}`;
+  }
+  const closeModal = () => { $('modalBack').hidden = true; };
+  $('mOpts').addEventListener('change', updateModal);
+  $('mMinus').addEventListener('click', () => { if (mQty > 1) { mQty--; $('mQty').textContent = mQty; updateModal(); } });
+  $('mPlus').addEventListener('click', () => { if (mQty < 50) { mQty++; $('mQty').textContent = mQty; updateModal(); } });
+  $('mClose').addEventListener('click', closeModal);
+  $('mCancel').addEventListener('click', closeModal);
+  $('modalBack').addEventListener('click', (e) => { if (e.target === $('modalBack')) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modalBack').hidden) closeModal(); });
+  $('modal').addEventListener('submit', (e) => {
+    e.preventDefault();
+    addLine(mItem, picked(), $('mNotes').value.trim(), mQty);
+    closeModal();
+  });
+
+  function addLine(item, options, notes, qty) {
+    const lines = ticket.lines();
+    const key = item.id + '|' + options.map(o => o.groupId + ':' + o.id).join(',');
+    const same = lines.find(l => l.key === key && l.notes === notes);
+    if (same) same.qty += qty;
+    else lines.push({ id: Date.now(), key, itemId: item.id, name: item.name, basePrice: item.price, unitPrice: item.price + options.reduce((n, o) => n + o.price, 0), options, notes, qty });
+    ticket.save(lines);
+    renderTicket();
+  }
+
+  // ---- Ticket ----
+  for (let t = 1; t <= D.cafe.tables; t++) $('table').insertAdjacentHTML('beforeend', `<option value="${t}">Table ${t}</option>`);
+  document.querySelectorAll('input[name="type"]').forEach(r => r.addEventListener('change', () => {
+    $('tableWrap').hidden = type() !== 'dine-in';
+  }));
+  const type = () => document.querySelector('input[name="type"]:checked').value;
+
+  function subtotal() { return BB.round2(ticket.lines().reduce((n, l) => n + l.unitPrice * l.qty, 0)); }
+
+  function renderTicket() {
+    const lines = ticket.lines();
+    $('lines').innerHTML = lines.length ? lines.map(l => `
+      <div class="tl" data-id="${l.id}">
+        <span><b>${esc(l.name)}</b>${BBC.optionText(l) ? `<small>${esc(BBC.optionText(l))}</small>` : ''}${l.notes ? `<small><i>${esc(l.notes)}</i></small>` : ''}</span>
+        <span class="amt">${BB.peso(l.unitPrice * l.qty, true)}</span>
+        <span class="qty-row"><button type="button" data-act="minus" aria-label="Decrease">−</button><output>${l.qty}</output><button type="button" data-act="plus" aria-label="Increase">+</button></span>
+        <button type="button" class="rm" data-act="rm">Remove</button>
+      </div>`).join('') : '<p class="no-lines">Tap an item on the left to start an order.</p>';
+
+    const sub = subtotal();
+    if (voucher) {
+      const re = BB.checkVoucher(voucher.code, sub);
+      voucher = re.ok && !re.freeDelivery ? re : null;
+      if (!voucher) { $('vmsg').className = 'vmsg bad'; $('vmsg').textContent = re.message || 'Voucher removed.'; }
+    }
+    const disc = voucher ? voucher.amount : 0;
+    const total = BB.round2(sub - disc);
+    $('totals').innerHTML = `
+      <div><span>Subtotal</span><span>${BB.peso(sub, true)}</span></div>
+      ${disc ? `<div class="minus"><span>Voucher ${voucher.code}</span><span>−${BB.peso(disc, true)}</span></div>` : ''}
+      <div class="big"><span>Total</span><span>${BB.peso(total, true)}</span></div>`;
+    $('charge').disabled = !lines.length;
+    $('charge').textContent = lines.length ? `Charge ${BB.peso(total, true)}` : 'Charge';
+  }
+
+  $('lines').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const id = Number(b.closest('.tl').dataset.id);
+    let lines = ticket.lines();
+    const l = lines.find(x => x.id === id);
+    if (b.dataset.act === 'plus') l.qty++;
+    if (b.dataset.act === 'minus') l.qty--;
+    if (b.dataset.act === 'rm') l.qty = 0;
+    ticket.save(lines.filter(x => x.qty > 0));
+    renderTicket();
+  });
+
+  $('applyV').addEventListener('click', () => {
+    const res = BB.checkVoucher($('voucher').value, subtotal());
+    if (res.ok && res.freeDelivery) { $('vmsg').className = 'vmsg bad'; $('vmsg').textContent = `${res.code} is for delivery orders only.`; return; }
+    voucher = res.ok ? res : null;
+    $('vmsg').className = 'vmsg ' + (res.ok ? 'ok' : 'bad');
+    $('vmsg').textContent = res.ok ? `${res.code} applied · ${res.label}` : res.message;
+    renderTicket();
+  });
+
+  $('custMobile').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
+
+  $('clear').addEventListener('click', () => {
+    ticket.save([]); voucher = null;
+    $('voucher').value = ''; $('vmsg').textContent = ''; $('custName').value = ''; $('custMobile').value = '';
+    renderTicket();
+  });
+
+  $('charge').addEventListener('click', () => {
+    const mobile = $('custMobile').value.trim();
+    if (mobile && !/^09\d{9}$/.test(mobile)) {
+      $('vmsg').className = 'vmsg bad';
+      $('vmsg').textContent = 'Mobile number must be 11 digits and start with 09, or leave it blank.';
+      return;
+    }
+    const lines = ticket.lines();
+    const sub = subtotal();
+    const order = {
+      type: type(),
+      table: type() === 'dine-in' ? Number($('table').value) : null,
+      customer: { name: $('custName').value.trim(), mobile },
+      delivery: null,
+      items: lines,
+      subtotal: sub,
+      voucher: voucher ? { code: voucher.code, amount: voucher.amount } : null,
+      pointsUsed: 0,
+      deliveryFee: 0,
+      method: null,
+      status: 'awaiting_payment',
+      source: 'pos',
+      createdBy: user.name
+    };
+    order.total = BB.orderTotal(order);
+    const saved = BB.orders.create(order, { mine: false });
+    BB.audit.log('Created counter order', `${saved.orderNo} · ${BB.peso(saved.total, true)}`);
+    ticket.save([]);
+    location.href = 'payment.html?order=' + saved.id;
+  });
+
+  renderGrid();
+  renderTicket();
+})();
+</script>
+</body>
+</html>

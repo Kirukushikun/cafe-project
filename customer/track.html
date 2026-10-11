@@ -40,7 +40,7 @@
 
       <section class="card demo" id="demo">
         <div class="card-head"><h2>Demo controls</h2><span class="chip chip-caramel">Mockup only</span></div>
-        <p>Stands in for the cashier and kitchen screens until they are built. Customers would never see this.</p>
+        <p>Stands in for the kitchen display until it is built. Customers would never see this. Cash payments are taken in the cashier’s Orders screen.</p>
         <button class="btn btn-ghost" type="button" id="advance"></button>
       </section>
     </div>
@@ -78,6 +78,7 @@
         : ['Ready for pickup', 'Your order is waiting at the counter. Show your order number.'];
       case 'completed': return ['Enjoy!', 'Thanks for ordering at Brew & Bite Café.'];
       case 'cancelled': return ['Order cancelled', 'This order was cancelled. Nothing was charged.'];
+      case 'voided': return ['Order voided', 'The cashier voided this order. Please see the counter for your refund.'];
     }
     return ['', ''];
   }
@@ -112,10 +113,11 @@
       { key: 'ready', label: o.type === 'delivery' ? 'Out for delivery' : 'Ready', sub: o.type === 'take-out' ? 'Pick up at the counter' : '' },
       { key: 'completed', label: finalLabel(o), sub: '' }
     ];
-    if (o.status === 'cancelled') {
+    if (o.status === 'cancelled' || o.status === 'voided') {
+      const word = o.status === 'voided' ? 'Voided' : 'Cancelled';
       $('timeline').innerHTML = `
         <li class="done"><span class="tl-dot">${check}</span><span><b>Order placed</b></span><time>${hm(o.createdAt)}</time></li>
-        <li class="now"><span class="tl-dot"></span><span><b>Cancelled</b><small>${BBC.esc(o.cancelReason || '')}</small></span><time>${hm(timeOf(o, 'cancelled'))}</time></li>`;
+        <li class="now"><span class="tl-dot"></span><span><b>${word}</b><small>${BBC.esc(o.cancelReason || '')}</small></span><time>${hm(timeOf(o, o.status))}</time></li>`;
     } else {
       const rank = RANK[o.status];
       $('timeline').innerHTML = steps.map((s, i) => {
@@ -132,7 +134,7 @@
       <span>Order no.</span><span>${o.orderNo}</span>
       <span>Placed</span><span>${BB.dateTime(o.createdAt)}</span>
       <span>Type</span><span>${BBC.orderTypeLabel(o)}</span>
-      <span>Payment</span><span>${methodName[o.method]} · ${o.paidAt ? 'Paid' : o.status === 'cancelled' ? 'Not charged' : 'Unpaid'}</span>
+      <span>Payment</span><span>${methodName[o.method] || 'Cash'} · ${o.status === 'voided' ? 'Voided' : o.paidAt ? 'Paid' : o.status === 'cancelled' ? 'Not charged' : 'Unpaid'}</span>
       <span>Total</span><span>${BB.peso(o.total, true)}</span>`;
     $('items').innerHTML = BBC.lineRows(o.items);
 
@@ -143,7 +145,8 @@
       <a class="btn btn-primary" href="menu.html">Order more</a>`;
 
     // Demo: move the order along as the cashier and kitchen would
-    const next = { awaiting_payment: 'Cashier receives cash payment', paid: 'Kitchen starts preparing', preparing: 'Kitchen marks it ready', ready: `Mark as ${finalLabel(o).toLowerCase()}` }[o.status];
+    // Cash payments are now taken in the cashier screen (Cashier › Orders)
+    const next = { paid: 'Kitchen starts preparing', preparing: 'Kitchen marks it ready', ready: `Mark as ${finalLabel(o).toLowerCase()}` }[o.status];
     $('demo').hidden = !next;
     if (next) $('advance').textContent = next + ' →';
   }
@@ -165,8 +168,7 @@
 
   $('advance').addEventListener('click', () => {
     const o = BB.orders.get(currentId);
-    if (o.status === 'awaiting_payment') BB.payments.record(o, 'CASH', { tendered: o.total, changeDue: 0, receivedBy: 'demo-cashier' });
-    else if (o.status === 'paid') BB.orders.update(o.id, { status: 'preparing' });
+    if (o.status === 'paid') BB.orders.update(o.id, { status: 'preparing' });
     else if (o.status === 'preparing') BB.orders.update(o.id, { status: 'ready' });
     else if (o.status === 'ready') BB.orders.update(o.id, { status: 'completed' });
     render();

@@ -125,7 +125,7 @@
   const areas = [
     { name: 'Public', screens: [
       { name: 'Café homepage', file: 'home/index.html', done: true },
-      { name: 'Staff login', file: 'login.html' }
+      { name: 'Staff login', file: 'login.html', done: true }
     ]},
     { name: 'Customer', screens: [
       { name: 'Menu (opened by QR scan)', file: 'customer/menu.html?table=5', done: true },
@@ -136,10 +136,10 @@
       { name: 'My orders and tracker', file: 'customer/track.html', done: true }
     ]},
     { name: 'Cashier', screens: [
-      { name: 'POS: walk-in orders', file: 'cashier/pos.html' },
-      { name: 'Orders awaiting payment', file: 'cashier/orders.html' },
-      { name: 'Payment and senior/PWD discount', file: 'cashier/payment.html' },
-      { name: 'Receipt', file: 'cashier/receipt.html' }
+      { name: 'POS: walk-in orders', file: 'cashier/pos.html', done: true },
+      { name: 'Orders: payments, cancel, void, serve', file: 'cashier/orders.html', done: true },
+      { name: 'Payment and senior/PWD discount (from Orders)', file: 'cashier/payment.html', done: true, flowOnly: true },
+      { name: 'Receipt (after payment)', file: 'cashier/receipt.html', done: true, flowOnly: true }
     ]},
     { name: 'Kitchen', screens: [
       { name: 'Kitchen display', file: 'kitchen/display.html' }

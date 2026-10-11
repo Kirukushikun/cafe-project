@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Take Payment · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .pay { display: grid; grid-template-columns: 1fr 420px; gap: 16px; align-items: start; }
+    .li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .9rem; }
+    .li:last-child { border-bottom: 0; }
+    .li-qty { font-family: var(--mono); color: var(--muted); }
+    .li-main small { display: block; color: var(--muted); font-size: .78rem; }
+    .li-amt { font-family: var(--mono); }
+    .meta { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: .88rem; }
+    .meta span:nth-child(odd) { color: var(--muted); }
+    .sum { display: grid; gap: 5px; font-size: .92rem; }
+    .sum div { display: flex; justify-content: space-between; gap: 10px; }
+    .sum span:last-child { font-variant-numeric: tabular-nums; }
+    .sum .minus span:last-child { color: var(--accent); }
+    .sum .big { font-weight: 800; font-size: 1.5rem; font-family: var(--display); border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 4px; }
+    .sum .fine { font-size: .78rem; color: var(--muted); }
+    .switch { display: flex; gap: 10px; align-items: center; cursor: pointer; font-weight: 600; }
+    .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+    .methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .methods label { border: 1px solid var(--line); border-radius: 9px; padding: 10px; text-align: center; cursor: pointer; font-weight: 600; background: var(--surface); }
+    .methods input { position: absolute; opacity: 0; pointer-events: none; }
+    .methods label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .methods label:has(input:focus-visible) { outline: 3px solid var(--accent-soft); }
+    .quick { display: flex; flex-wrap: wrap; gap: 6px; }
+    .change { display: flex; justify-content: space-between; align-items: baseline; background: var(--sunk); border-radius: 9px; padding: 12px 14px; }
+    .change strong { font: 800 1.6rem var(--display); font-variant-numeric: tabular-nums; }
+    .err { color: var(--danger); font-size: .85rem; }
+    .note { font-size: .84rem; color: var(--muted); background: var(--sunk); padding: 10px 12px; border-radius: 8px; }
+    .confirm { width: 100%; padding: 14px; font-size: 1.05rem; }
+    .state { padding: 40px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+    @media (max-width: 1000px) { .pay { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1 id="title">Take payment</h1><div class="sub" id="sub"></div></div>
+      <a class="btn btn-ghost btn-sm" href="orders.html">← Back to orders</a>
+    </header>
+
+    <div class="work-body">
+      <div class="panel state" id="state" hidden></div>
+
+      <div class="pay" id="pay" hidden>
+        <section class="panel panel-pad">
+          <div class="meta" id="meta"></div>
+          <div id="items"></div>
+        </section>
+
+        <form class="panel panel-pad" id="form" novalidate>
+          <!-- Senior / PWD -->
+          <label class="switch"><input type="checkbox" id="spOn"> Senior citizen / PWD discount</label>
+          <div id="spFields" hidden style="display:grid;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <label class="lbl">Type<select class="input" id="spType"><option>Senior citizen</option><option>PWD</option></select></label>
+              <label class="lbl">ID number<input class="input" id="spId" placeholder="e.g. OSCA-TC-04512"></label>
+              <label class="lbl" style="grid-column:span 2">Name on ID<input class="input" id="spName"></label>
+              <label class="lbl">Eligible persons<input class="input" id="spEligible" type="number" min="1" value="1"></label>
+              <label class="lbl">Total diners sharing<input class="input" id="spDiners" type="number" min="1" value="1"></label>
+            </div>
+            <p class="note" id="spNote"></p>
+          </div>
+
+          <div class="r-sep" style="border-top:1px dashed var(--line)"></div>
+          <div class="sum" id="sum"></div>
+
+          <div class="r-sep" style="border-top:1px dashed var(--line)"></div>
+          <div class="methods" role="radiogroup" aria-label="Payment method">
+            <label><input type="radio" name="method" value="CASH" checked> Cash</label>
+            <label><input type="radio" name="method" value="GCASH"> GCash</label>
+            <label><input type="radio" name="method" value="MAYA"> Maya</label>
+          </div>
+
+          <div id="cashBox" style="display:grid;gap:10px">
+            <label class="lbl">Amount received<input class="input" id="tendered" type="number" min="0" step="0.01" inputmode="decimal" style="font-size:1.2rem;font-family:var(--mono)"></label>
+            <div class="quick" id="quick"></div>
+            <div class="change"><span>Change</span><strong id="change">₱0.00</strong></div>
+          </div>
+          <p class="note" id="walletBox" hidden>Simulated e-wallet payment. The customer scans the café’s QR at the counter; tapping Confirm saves the payment record with a reference number. No real money moves.</p>
+
+          <p class="err" id="err" role="alert" hidden></p>
+          <button class="btn btn-primary confirm" type="submit" id="confirm">Confirm payment</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['cashier'], 'orders');
+  if (!user) return;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+  const order = BB.orders.get(new URLSearchParams(location.search).get('order'));
+
+  if (!order) return showState('Order not found', 'It may have been removed when the demo data was reset.', '<a class="btn btn-primary" href="orders.html">Go to orders</a>');
+  $('sub').textContent = `${order.orderNo} · ${BBC.orderTypeLabel(order)} · ${order.source === 'pos' ? 'Counter order' : 'QR order'}`;
+  if (order.status === 'cancelled') return showState('This order was cancelled', order.cancelReason || '', '<a class="btn btn-primary" href="orders.html">Back to orders</a>');
+  if (order.status !== 'awaiting_payment') return showState('Already paid', `${order.orderNo} was paid by ${order.method} (${order.paymentRef}).`, `<a class="btn btn-primary" href="receipt.html?order=${order.id}">View receipt</a>`);
+
+  function showState(h, p, actions) {
+    $('state').hidden = false;
+    $('state').innerHTML = `<h2>${esc(h)}</h2><p class="muted">${esc(p)}</p>${actions}`;
+  }
+
+  $('pay').hidden = false;
+  $('meta').innerHTML = `
+    <span>Order no.</span><span class="mono">${order.orderNo}</span>
+    <span>Placed</span><span>${BB.dateTime(order.createdAt)} · ${BBS.ago(order.createdAt)}</span>
+    <span>Type</span><span>${BBC.orderTypeLabel(order)}</span>
+    ${order.customer.name ? `<span>Customer</span><span>${esc(order.customer.name)}${order.customer.mobile ? ' · ' + order.customer.mobile : ''}</span>` : ''}
+    ${order.delivery ? `<span>Deliver to</span><span>${esc(order.delivery.address)}</span>` : ''}`;
+  $('items').innerHTML = BBC.lineRows(order.items);
+
+  // ---- Discount ----
+  function senior() {
+    if (!$('spOn').checked) return null;
+    const eligible = Math.max(1, parseInt($('spEligible').value, 10) || 1);
+    const diners = Math.max(eligible, parseInt($('spDiners').value, 10) || 1);
+    return {
+      type: $('spType').value, idNo: $('spId').value.trim(), name: $('spName').value.trim(),
+      eligible, diners, amount: BB.seniorDiscount(order.subtotal, eligible, diners)
+    };
+  }
+
+  function draftOrder() {
+    const sp = senior();
+    // Senior/PWD discount can't be combined with a voucher
+    return Object.assign({}, order, { senior: sp, voucher: sp ? null : order.voucher });
+  }
+
+  function update() {
+    $('spFields').hidden = !$('spOn').checked;
+    const d = draftOrder();
+    const total = BB.orderTotal(d);
+    const sp = d.senior;
+    if (sp) {
+      const share = BB.round2(order.subtotal * sp.eligible / sp.diners);
+      $('spNote').textContent = `Eligible share ${BB.peso(share, true)} ÷ 1.12 = ${BB.peso(share / 1.12, true)} (VAT-exempt), less 20% = ${BB.peso(share - sp.amount, true)}.` +
+        (order.voucher ? ` Voucher ${order.voucher.code} is removed because it can’t be combined with this discount.` : '');
+    }
+    $('sum').innerHTML = `
+      <div><span>Subtotal</span><span>${BB.peso(d.subtotal, true)}</span></div>
+      ${d.voucher ? `<div class="minus"><span>Voucher ${d.voucher.code}</span><span>−${BB.peso(d.voucher.amount, true)}</span></div>` : ''}
+      ${sp ? `<div class="minus"><span>${sp.type} discount (${sp.eligible}/${sp.diners})</span><span>−${BB.peso(sp.amount, true)}</span></div>` : ''}
+      ${d.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(d.pointsUsed, true)}</span></div>` : ''}
+      ${d.deliveryFee ? `<div><span>Delivery fee</span><span>${BB.peso(d.deliveryFee, true)}</span></div>` : ''}
+      <div class="big"><span>Amount due</span><span>${BB.peso(total, true)}</span></div>`;
+
+    const m = method();
+    $('cashBox').hidden = m !== 'CASH';
+    $('walletBox').hidden = m === 'CASH';
+    const quick = [total, Math.ceil(total / 50) * 50, Math.ceil(total / 100) * 100, 500, 1000].filter((v, i, a) => v >= total && a.indexOf(v) === i);
+    $('quick').innerHTML = quick.map((v, i) => `<button type="button" class="btn btn-ghost btn-sm" data-v="${v}">${i === 0 ? 'Exact ' : ''}${BB.peso(v, i === 0)}</button>`).join('');
+    const t = parseFloat($('tendered').value) || 0;
+    $('change').textContent = BB.peso(Math.max(0, t - total), true);
+    $('confirm').textContent = `Confirm ${m === 'CASH' ? 'cash' : m === 'GCASH' ? 'GCash' : 'Maya'} payment · ${BB.peso(total, true)}`;
+    return total;
+  }
+
+  const method = () => document.querySelector('input[name="method"]:checked').value;
+  $('form').addEventListener('input', update);
+  $('form').addEventListener('change', update);
+  $('quick').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    $('tendered').value = b.dataset.v;
+    update();
+  });
+
+  if (order.method && order.method !== 'CASH') document.querySelector(`input[name="method"][value="${order.method}"]`).checked = true;
+  update();
+
+  $('form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const total = update();
+    const d = draftOrder();
+    const m = method();
+    const err = $('err');
+    err.hidden = true;
+    let problem = '';
+    if (d.senior && !d.senior.idNo) problem = 'Enter the senior citizen or PWD ID number.';
+    else if (d.senior && !d.senior.name) problem = 'Enter the name printed on the ID.';
+    const tendered = parseFloat($('tendered').value) || 0;
+    if (!problem && m === 'CASH' && tendered < total) problem = `Amount received is short by ${BB.peso(total - tendered, true)}.`;
+    if (problem) { err.textContent = problem; err.hidden = false; return; }
+
+    const updated = BB.orders.update(order.id, { senior: d.senior, voucher: d.voucher, total, cashier: user.name });
+    if (d.senior) BB.audit.log('Applied discount', `${order.orderNo} · ${d.senior.type} ${d.senior.idNo} · −${BB.peso(d.senior.amount, true)}`);
+    BB.payments.record(updated, m, m === 'CASH'
+      ? { tendered: BB.round2(tendered), changeDue: BB.round2(tendered - total), receivedBy: user.name }
+      : { receivedBy: user.name });
+    location.href = 'receipt.html?order=' + order.id;
+  });
+})();
+</script>
+</body>
+</html>

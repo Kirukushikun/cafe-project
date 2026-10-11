@@ -52,8 +52,8 @@
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>';
 
   // ---- Header message ----
-  if (order.status === 'cancelled') {
-    $('done').innerHTML = `<h1>This order was cancelled</h1><span class="order-no">${order.orderNo}</span>`;
+  if (order.status === 'cancelled' || order.status === 'voided') {
+    $('done').innerHTML = `<h1>This order was ${order.status}</h1><p class="muted">${BBC.esc(order.cancelReason || '')}</p><span class="order-no">${order.orderNo}</span>`;
   } else if (paid) {
     $('done').innerHTML = `
       <div class="done-icon">${check}</div>
@@ -70,7 +70,7 @@
   }
 
   // ---- Loyalty points ----
-  if (order.customer.mobile && order.status !== 'cancelled') {
+  if (order.customer.mobile && !['cancelled', 'voided'].includes(order.status)) {
     const member = BB.loyalty.member(order.customer.mobile);
     const earned = paid ? order.pointsEarned : BB.loyalty.earnFor(order.total);
     $('points').innerHTML = `<div class="points-box"><strong>+${earned}</strong><span>${paid ? 'points earned' : 'points to earn once paid'}. Balance: <b>${member ? member.points : 0} points</b>.</span></div>`;
@@ -99,6 +99,7 @@
     <div class="sum">
       <div><span>Subtotal</span><span>${BB.peso(order.subtotal, true)}</span></div>
       ${order.voucher ? `<div class="minus"><span>Voucher (${order.voucher.code})</span><span>−${BB.peso(order.voucher.amount, true)}</span></div>` : ''}
+      ${order.senior ? `<div class="minus"><span>${order.senior.type} discount</span><span>−${BB.peso(order.senior.amount, true)}</span></div>` : ''}
       ${order.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(order.pointsUsed, true)}</span></div>` : ''}
       ${order.type === 'delivery' ? `<div><span>Delivery fee</span><span>${order.deliveryFee ? BB.peso(order.deliveryFee, true) : 'Free'}</span></div>` : ''}
       <div class="total"><span>Total</span><span>${BB.peso(order.total, true)}</span></div>

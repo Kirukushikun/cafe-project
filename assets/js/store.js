@@ -121,7 +121,8 @@
   const orders = {
     list: () => get('orders', []),
     get: (id) => orders.list().find(o => o.id === id) || null,
-    create(order) {
+    // opts.mine = false for counter (POS) orders, so they don't show in this browser's "My orders"
+    create(order, opts) {
       const all = orders.list();
       const now = new Date().toISOString();
       order.id = order.id || 'o' + Date.now();
@@ -130,9 +131,11 @@
       order.statusLog = [{ status: order.status, at: now }];
       all.push(order);
       set('orders', all);
-      const mine = get('myOrders', []);
-      mine.push(order.id);
-      set('myOrders', mine);
+      if (!opts || opts.mine !== false) {
+        const mine = get('myOrders', []);
+        mine.push(order.id);
+        set('myOrders', mine);
+      }
       return order;
     },
     update(id, patch) {
@@ -173,7 +176,69 @@
       const points = order.customer && order.customer.mobile ? loyalty.earnFor(order.total) : 0;
       if (points) loyalty.add(order.customer.mobile, order.customer.name, points);
       orders.update(order.id, { status: 'paid', paidAt: now, method, paymentRef: p.referenceNo, pointsEarned: points });
+      audit.log('Payment recorded', `${order.orderNo} · ${method} · ${peso(p.amount, true)} · ${p.referenceNo}`);
       return p;
+    },
+    // Voids a paid order: payment marked VOIDED, loyalty points reversed, order status "voided"
+    voidOrder(order, reason) {
+      const all = payments.list();
+      const p = all.find(x => x.orderId === order.id);
+      if (p) { p.status = 'VOIDED'; p.voidedAt = new Date().toISOString(); p.voidReason = reason; set('payments', all); }
+      const m = order.customer && order.customer.mobile;
+      if (m && order.pointsEarned) loyalty.add(m, '', -order.pointsEarned);
+      if (m && order.pointsUsed) loyalty.add(m, '', order.pointsUsed);
+      orders.update(order.id, { status: 'voided', cancelReason: reason });
+      audit.log('Voided order', `${order.orderNo} · ${peso(order.total, true)} · ${reason}`);
+    }
+  };
+
+  // ---- Senior citizen / PWD discount ----
+  // The eligible share (subtotal × eligible ÷ diners) is made VAT-exempt, then 20% off.
+  // seniorDiscount(245, 1, 1) -> 70  (245 ÷ 1.12 = 218.75, less 20% = 175)
+  function seniorDiscount(subtotal, eligible, diners) {
+    const cfg = window.BB_DATA.seniorPwd;
+    const share = subtotal * Math.min(eligible, diners) / diners;
+    const exempt = share / (1 + cfg.vat);
+    const discounted = exempt * (1 - cfg.percent / 100);
+    return round2(share - discounted);
+  }
+
+  // Total after every adjustment on the order
+  function orderTotal(o) {
+    const t = o.subtotal
+      - (o.voucher ? o.voucher.amount : 0)
+      - (o.senior ? o.senior.amount : 0)
+      - (o.pointsUsed || 0)
+      + (o.deliveryFee || 0);
+    return round2(Math.max(0, t));
+  }
+
+  // ---- Staff login (demo only) ----
+  const staff = {
+    current: () => get('staff', null),
+    login(username, password) {
+      const u = (window.BB_DATA.users || []).find(x => x.username === username.trim().toLowerCase() && x.password === password);
+      if (!u) return null;
+      const s = { id: u.id, name: u.name, username: u.username, role: u.role, since: new Date().toISOString() };
+      set('staff', s);
+      audit.log('Logged in', `${u.name} (${u.role})`, s);
+      return s;
+    },
+    logout() {
+      const s = staff.current();
+      if (s) audit.log('Logged out', s.name, s);
+      set('staff', null);
+    }
+  };
+
+  // ---- Audit log ----
+  const audit = {
+    list: () => get('audit', []),
+    log(action, detail, who) {
+      const u = who || staff.current() || { name: 'Customer (QR)', role: 'customer' };
+      const all = audit.list();
+      all.push({ id: 'a' + Date.now() + Math.random().toString(36).slice(2, 5), at: new Date().toISOString(), user: u.name, role: u.role, action, detail });
+      set('audit', all);
     }
   };
 
@@ -184,8 +249,9 @@
     preparing: { label: 'Preparing', chip: 'chip-caramel' },
     ready: { label: 'Ready', chip: 'chip-green' },
     completed: { label: 'Completed', chip: 'chip-green' },
-    cancelled: { label: 'Cancelled', chip: 'chip-red' }
+    cancelled: { label: 'Cancelled', chip: 'chip-red' },
+    voided: { label: 'Voided', chip: 'chip-red' }
   };
 
-  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS };
+  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit };
 })();
