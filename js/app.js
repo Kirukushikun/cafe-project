@@ -3581,7 +3581,7 @@ BBViews['admin/dashboard'] = function () {
   const $ = (id) => document.getElementById(id);
   const esc = BBC.esc;
   const p0 = (n) => BB.peso(Math.round(n));
-  const COLORS = { GCASH: '#1F5FD1', CASH: '#A8661B', MAYA: '#0E8F5E' };
+  const COLORS = { GCASH: 'var(--pay-gcash)', CASH: 'var(--pay-cash)', MAYA: 'var(--pay-maya)' };
   const NAMES = { GCASH: 'GCash', CASH: 'Cash', MAYA: 'Maya' };
   const h = new Date().getHours();
   $('greet').textContent = `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${user.name.split(' ')[0]}`;
@@ -3593,18 +3593,19 @@ BBViews['admin/dashboard'] = function () {
     if (!before) return '';
     if (!now) return '<span class="hint">No paid orders yet today</span>';
     const pct = Math.round((now - before) / before * 100);
-    return `<span class="delta ${pct >= 0 ? 'up' : 'down'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs same day last week</span>`;
+    return `<span class="delta ${pct >= 0 ? 'up' : 'down'}">${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs this time last week</span>`;
   }
 
   function render() {
     const today = BB.history.sales(dayStart(0), dayStart(-1));
-    const lastWeek = BB.history.sales(dayStart(7), dayStart(6));
+    // Same weekday last week, up to the same time of day, so the comparison is fair mid-shift
+    const lastWeek = BB.history.sales(dayStart(7), new Date(Date.now() - 7 * 86400000));
     const salesT = sum(today, o => o.total), salesLW = sum(lastWeek, o => o.total);
     const discT = sum(today, o => o.discount);
     $('kpis').innerHTML = `
       <div class="kpi"><small>Sales today</small><strong>${BB.peso(salesT, true)}</strong>${delta(salesT, salesLW)}</div>
       <div class="kpi"><small>Paid orders today</small><strong>${today.length}</strong>${delta(today.length, lastWeek.length)}</div>
-      <div class="kpi"><small>Average order</small><strong>${BB.peso(today.length ? salesT / today.length : 0, true)}</strong><span class="hint">Last week same day ${BB.peso(lastWeek.length ? salesLW / lastWeek.length : 0, true)}</span></div>
+      <div class="kpi"><small>Average order</small><strong>${BB.peso(today.length ? salesT / today.length : 0, true)}</strong><span class="hint">Same time last week ${BB.peso(lastWeek.length ? salesLW / lastWeek.length : 0, true)}</span></div>
       <div class="kpi"><small>Discounts given today</small><strong>${BB.peso(discT, true)}</strong><span class="hint">Vouchers, senior/PWD, points</span></div>`;
 
     // 14-day sales
@@ -3683,7 +3684,7 @@ BBViews['admin/reports'] = function () {
   const p2 = (n) => BB.peso(n, true);
   const sum = (list, f) => list.reduce((n, x) => n + f(x), 0);
   const NAMES = { GCASH: 'GCash', CASH: 'Cash', MAYA: 'Maya' };
-  const COLORS = { GCASH: '#1F5FD1', CASH: '#A8661B', MAYA: '#0E8F5E' };
+  const COLORS = { GCASH: 'var(--pay-gcash)', CASH: 'var(--pay-cash)', MAYA: 'var(--pay-maya)' };
   const TABS = [['sales', 'Sales summary'], ['items', 'Best sellers'], ['usage', 'Ingredient usage'], ['waste', 'Wastage'], ['payments', 'Payment records']];
   let tab = (location.hash || '#sales').slice(1);
   let csv = []; // rows for the export button
@@ -3883,9 +3884,9 @@ BBViews['admin/menu'] = function () {
       const av = availability(i);
       const soldNow = BB.menu.isSoldOut(i);
       return `<tr>
-        <td><div class="item-cell"><span class="sw" style="background:linear-gradient(135deg, ${i.tone[0]}, ${i.tone[1]})"></span><span><b>${esc(i.name)}</b>${(i.tags || []).map(t => ` <span class="chip ${t === 'New' ? 'chip-gcash' : 'chip-caramel'}">${t}</span>`).join('')}<small>${esc(i.desc)}</small></span></div></td>
+        <td><div class="item-cell"><span class="sw" style="background:linear-gradient(135deg, ${i.tone[0]}, ${i.tone[1]})"></span><span><b>${esc(i.name)}</b>${(i.tags || []).map(t => ` <span class="chip ${t === 'New' ? 'chip-green' : 'chip-gold'}">${t}</span>`).join('')}<small>${esc(i.desc)}</small></span></div></td>
         <td>${esc((D.categories.find(c => c.id === i.cat) || { name: '—' }).name)}</td>
-        <td class="r num"><b>${BB.peso(i.price)}</b>${sg ? `<small>L ${BB.peso(i.price + sg.choices[1].price)}</small>` : ''}</td>
+        <td class="r num price-cell"><b>${BB.peso(i.price)}</b>${sg ? `<small>Large ${BB.peso(i.price + sg.choices[1].price)}</small>` : ''}</td>
         <td><small style="color:var(--ink)">${esc(opts) || '<span class="muted">None</span>'}</small></td>
         <td class="r num">${D.recipes[i.id] && D.recipes[i.id].length ? BB.peso(cost, true) : '<a href="admin.html?view=recipes&item=' + i.id + '">Add recipe</a>'}</td>
         <td class="r num ${margin >= 65 ? 'margin-good' : 'margin-low'}">${D.recipes[i.id] ? margin.toFixed(0) + '%' : '—'}</td>
@@ -4073,7 +4074,7 @@ BBViews['admin/recipes'] = function () {
     const g = I.ing(r[0]) || I.ingredients()[0];
     return `<tr><td><select class="input" data-f="ing">${ingOptions(g.id)}</select></td>
       <td><div class="q"><input class="input" data-f="qty" type="number" min="0" step="any" value="${r[1]}"><span data-f="unit">${g.unit}</span></div></td>
-      <td>${sizeable ? `<input type="checkbox" data-f="scale" ${r[2] ? 'checked' : ''} aria-label="Scales with Large" style="width:18px;height:18px;accent-color:var(--accent)">` : '<span class="muted">—</span>'}</td>
+      <td>${sizeable ? `<input type="checkbox" data-f="scale" ${r[2] ? 'checked' : ''} aria-label="Scales with Large" style="width:18px;height:18px;accent-color:var(--accent-strong)">` : '<span class="muted">—</span>'}</td>
       <td class="r num" data-f="cost"></td><td><button type="button" class="rm" aria-label="Remove ingredient">×</button></td></tr>`;
   }
 

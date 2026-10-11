@@ -1199,11 +1199,11 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 .v-admin-dashboard .rank .v { font-family: var(--mono); font-size: .82rem; text-align: right; }
 .v-admin-dashboard .attn { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .v-admin-dashboard .attn li a { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: var(--ink); font-size: .9rem; }
-.v-admin-dashboard .attn li a:hover { border-color: var(--accent); }
+.v-admin-dashboard .attn li a:hover { border-color: var(--accent-strong); }
 .v-admin-dashboard .feed { list-style: none; margin: 0; padding: 0; display: grid; }
 .v-admin-dashboard .feed li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .86rem; }
 .v-admin-dashboard .feed li:first-child { border-top: 0; }
-.v-admin-dashboard .feed small { color: var(--muted); font-size: .76rem; }
+.v-admin-dashboard .feed small { display: block; color: var(--muted); font-size: .78rem; }
 .v-admin-dashboard .feed time { font-family: var(--mono); font-size: .74rem; color: var(--muted); }
 @media (max-width: 1000px) {
 .v-admin-dashboard .row { grid-template-columns: 1fr; }
@@ -1226,7 +1226,8 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 /* ===== admin/menu ===== */
 .v-admin-menu .sw { width: 34px; height: 34px; border-radius: 8px; flex: none; }
 .v-admin-menu .item-cell { display: flex; gap: 10px; align-items: center; }
-.v-admin-menu .margin-good { color: var(--accent); }
+.v-admin-menu .margin-good { color: var(--good); }
+.v-admin-menu td.price-cell { white-space: nowrap; }
 .v-admin-menu .margin-low { color: var(--danger); }
 .v-admin-menu .avail-sel { width: auto !important; padding: 6px 8px !important; font-size: .84rem !important; }
 .v-admin-menu .cat-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -1243,7 +1244,7 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 .v-admin-recipes .ilist small { color: var(--muted); font-size: .76rem; }
 .v-admin-recipes .ilist .m { font-family: var(--mono); font-size: .8rem; text-align: right; }
 .v-admin-recipes .ilist h4 { margin: 0; padding: 10px 14px 4px; font: 500 .68rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); background: var(--sunk); }
-.v-admin-recipes .good { color: var(--accent); }
+.v-admin-recipes .good { color: var(--good); }
 .v-admin-recipes .bad { color: var(--danger); }
 .v-admin-recipes .lines td { vertical-align: middle; padding: 6px 8px; }
 .v-admin-recipes .lines .input { padding: 7px 9px; }
@@ -1252,7 +1253,7 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 .v-admin-recipes .q span { font-size: .8rem; color: var(--muted); width: 22px; }
 .v-admin-recipes .rm { background: none; border: 0; color: var(--danger); cursor: pointer; font-size: 1.1rem; }
 .v-admin-recipes .cost-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.v-admin-recipes .cost-grid div { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.v-admin-recipes .cost-grid div { background: var(--card); padding: 12px 14px; display: grid; gap: 2px; }
 .v-admin-recipes .cost-grid small { color: var(--muted); font-size: .8rem; }
 .v-admin-recipes .cost-grid strong { font: 700 1.15rem var(--display); font-variant-numeric: tabular-nums; }
 @media (max-width: 1000px) {
@@ -1261,15 +1262,15 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 }
 
 /* ===== admin/promos ===== */
-.v-admin-promos .banner-preview { background: var(--caramel-soft); border-radius: var(--radius); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .9rem; }
-.v-admin-promos .banner-preview code { font-family: var(--mono); color: var(--caramel); background: var(--surface); padding: 3px 8px; border-radius: 6px; border: 1px dashed var(--caramel); }
+.v-admin-promos .banner-preview { background: var(--accent-soft); border-radius: var(--radius); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .9rem; }
+.v-admin-promos .banner-preview code { font-family: var(--mono); color: #DDA24C; background: #2B1E17; padding: 4px 9px; border-radius: 6px; letter-spacing: .04em; }
 .v-admin-promos .switch { position: relative; width: 40px; height: 22px; display: inline-block; }
 .v-admin-promos .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; cursor: pointer; z-index: 1; }
 .v-admin-promos .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background .15s; }
 .v-admin-promos .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
-.v-admin-promos .switch input:checked + span { background: var(--accent); }
+.v-admin-promos .switch input:checked + span { background: var(--good); }
 .v-admin-promos .switch input:checked + span::after { transform: translateX(18px); }
-.v-admin-promos .switch input:focus-visible + span { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+.v-admin-promos .switch input:focus-visible + span { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
 
 /* ===== admin/loyalty ===== */
 .v-admin-loyalty .settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
@@ -1281,12 +1282,12 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 /* ===== admin/users ===== */
 .v-admin-users .matrix td, .v-admin-users .matrix th { text-align: center; }
 .v-admin-users .matrix td:first-child, .v-admin-users .matrix th:first-child { text-align: left; }
-.v-admin-users .yes { color: var(--accent); font-weight: 700; }
+.v-admin-users .yes { color: var(--good); font-weight: 700; }
 .v-admin-users .no { color: var(--line); }
-.v-admin-users .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font: 700 .8rem var(--display); flex: none; }
+.v-admin-users .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); display: grid; place-items: center; font: 700 .8rem var(--display); flex: none; }
 .v-admin-users .who { display: flex; gap: 10px; align-items: center; }
 .v-admin-users .checkline { display: flex; gap: 8px; align-items: center; font-size: .9rem; cursor: pointer; }
-.v-admin-users .checkline input { width: 18px; height: 18px; accent-color: var(--accent); }
+.v-admin-users .checkline input { width: 18px; height: 18px; accent-color: var(--accent-strong); }
 
 /* ===== admin/audit ===== */
 .v-admin-audit .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -1295,4 +1296,6 @@ body.v-kitchen-display { overflow: auto; height: auto; }
 .v-admin-audit .area-chip.money { background: var(--gcash-soft); color: var(--gcash); }
 .v-admin-audit .area-chip.risk { background: var(--danger-soft); color: var(--danger); }
 .v-admin-audit .area-chip.stock { background: var(--caramel-soft); color: var(--caramel); }
-.v-admin-audit .area-chip.admin { background: var(--accent-soft); color: var(--accent); }
+.v-admin-audit .area-chip.admin { background: var(--accent-soft); color: var(--accent-strong); }
+
+
