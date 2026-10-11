@@ -108,6 +108,16 @@
       tables: 14
     },
     promo: { code: 'BREWBITE10', text: '10% off your order this October', percent: 10 },
+    // Vouchers customers can type at checkout
+    vouchers: [
+      { code: 'BREWBITE10', label: '10% off (max ₱100)', kind: 'percent', value: 10, max: 100, minSpend: 300, active: true },
+      { code: 'STUDENT20', label: '₱20 off', kind: 'fixed', value: 20, minSpend: 150, active: true },
+      { code: 'FREEDELIVERY', label: 'Free delivery', kind: 'delivery', value: 0, minSpend: 500, active: true },
+      { code: 'SWEETSEPT', label: '15% off', kind: 'percent', value: 15, minSpend: 0, active: false }
+    ],
+    delivery: { fee: 50, area: 'Within Tarlac City only' },
+    // Loyalty: earn 1 point per ₱50 paid, 1 point = ₱1 off. Sample members:
+    loyalty: { pesoPerPoint: 50, minRedeem: 20, members: { '09171234567': { name: 'Andrea Santos', points: 86 }, '09981112222': { name: 'Paolo Reyes', points: 24 } } },
     categories,
     items
   };

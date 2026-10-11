@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Order placed · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/customer.css">
+</head>
+<body class="customer">
+<div class="app" style="padding-bottom:150px">
+  <header class="c-bar">
+    <a class="c-back" href="menu.html" aria-label="Back to menu">←</a>
+    <h1>Receipt</h1>
+    <span class="session-pill" id="sessionPill"></span>
+  </header>
+
+  <div class="done" id="done"></div>
+
+  <div class="pad">
+    <div id="points"></div>
+    <article class="receipt" id="receipt"></article>
+  </div>
+</div>
+
+<div class="action-bar">
+  <a class="btn btn-primary" id="trackBtn" href="track.html">Track my order</a>
+  <a class="btn btn-ghost" href="menu.html">Order something else</a>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script>
+(function () {
+  if (!BBC.requireSession()) return;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const id = new URLSearchParams(location.search).get('order');
+  const order = BB.orders.get(id);
+  if (!order) { location.replace('track.html'); return; }
+
+  $('trackBtn').href = 'track.html?order=' + order.id;
+  const payment = BB.payments.forOrder(order.id);
+  const paid = !!payment;
+  const methodName = { GCASH: 'GCash', MAYA: 'Maya', CASH: 'Cash' }[order.method];
+
+  const check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>';
+  const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>';
+
+  // ---- Header message ----
+  if (order.status === 'cancelled') {
+    $('done').innerHTML = `<h1>This order was cancelled</h1><span class="order-no">${order.orderNo}</span>`;
+  } else if (paid) {
+    $('done').innerHTML = `
+      <div class="done-icon">${check}</div>
+      <h1>Payment successful</h1>
+      <p class="muted">We’ve sent your order to the kitchen.${order.type === 'dine-in' ? ` We’ll bring it to Table ${order.table}.` : ''}</p>
+      <span class="order-no">${order.orderNo}</span>`;
+  } else {
+    const where = order.type === 'delivery' ? 'Pay the rider in cash when your order arrives.' : 'Go to the counter and show this order number to the cashier.';
+    $('done').innerHTML = `
+      <div class="done-icon wait">${clock}</div>
+      <h1>Order placed. Please pay ${BB.peso(order.total, true)}</h1>
+      <p class="muted">${where} ${order.type === 'delivery' ? '' : 'We start preparing your order once it’s paid.'}</p>
+      <span class="order-no">${order.orderNo}</span>`;
+  }
+
+  // ---- Loyalty points ----
+  if (order.customer.mobile && order.status !== 'cancelled') {
+    const member = BB.loyalty.member(order.customer.mobile);
+    const earned = paid ? order.pointsEarned : BB.loyalty.earnFor(order.total);
+    $('points').innerHTML = `<div class="points-box"><strong>+${earned}</strong><span>${paid ? 'points earned' : 'points to earn once paid'}. Balance: <b>${member ? member.points : 0} points</b>.</span></div>`;
+  }
+
+  // ---- Receipt ----
+  const vatable = BB.round2(order.total / 1.12);
+  const vat = BB.round2(order.total - vatable);
+  $('receipt').innerHTML = `
+    <div class="r-head">
+      <b>Brew &amp; Bite Café</b>
+      <small>${BBC.esc(D.cafe.address)}</small>
+      <small>${paid ? 'Order receipt' : 'Order slip · not yet paid'} · For demo only, not an official receipt</small>
+    </div>
+    <div class="r-sep"></div>
+    <div class="r-meta">
+      <span>Order no.</span><span>${order.orderNo}</span>
+      <span>Date</span><span>${BB.dateTime(order.createdAt)}</span>
+      <span>Order type</span><span>${BBC.orderTypeLabel(order)}</span>
+      ${order.customer.name ? `<span>Customer</span><span>${BBC.esc(order.customer.name)}</span>` : ''}
+      ${order.delivery ? `<span>Deliver to</span><span>${BBC.esc(order.delivery.address)}</span>` : ''}
+    </div>
+    <div class="r-sep"></div>
+    <div style="display:grid;gap:8px">${BBC.lineRows(order.items)}</div>
+    <div class="r-sep"></div>
+    <div class="sum">
+      <div><span>Subtotal</span><span>${BB.peso(order.subtotal, true)}</span></div>
+      ${order.voucher ? `<div class="minus"><span>Voucher (${order.voucher.code})</span><span>−${BB.peso(order.voucher.amount, true)}</span></div>` : ''}
+      ${order.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(order.pointsUsed, true)}</span></div>` : ''}
+      ${order.type === 'delivery' ? `<div><span>Delivery fee</span><span>${order.deliveryFee ? BB.peso(order.deliveryFee, true) : 'Free'}</span></div>` : ''}
+      <div class="total"><span>Total</span><span>${BB.peso(order.total, true)}</span></div>
+      <div class="fine"><span>VATable sales</span><span>${BB.peso(vatable, true)}</span></div>
+      <div class="fine"><span>VAT (12%)</span><span>${BB.peso(vat, true)}</span></div>
+    </div>
+    <div class="r-sep"></div>
+    <div class="r-meta">
+      <span>Payment</span><span>${methodName}${paid ? '' : ' · unpaid'}</span>
+      ${paid ? `<span>Reference no.</span><span>${payment.referenceNo}</span>
+      <span>Paid on</span><span>${BB.dateTime(payment.paidAt)}</span>
+      <span>Status</span><span style="color:var(--accent)">PAID</span>` : ''}
+    </div>
+    <div class="r-foot">Thank you for visiting Brew &amp; Bite Café!</div>`;
+})();
+</script>
+</body>
+</html>

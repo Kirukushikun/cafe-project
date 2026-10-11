@@ -129,11 +129,11 @@
     ]},
     { name: 'Customer', screens: [
       { name: 'Menu (opened by QR scan)', file: 'customer/menu.html?table=5', done: true },
-      { name: 'Cart', file: 'customer/cart.html' },
-      { name: 'Checkout', file: 'customer/checkout.html' },
-      { name: 'GCash / Maya payment', file: 'customer/pay.html' },
-      { name: 'Success and receipt', file: 'customer/success.html' },
-      { name: 'Order tracker', file: 'customer/track.html' }
+      { name: 'Cart', file: 'customer/cart.html', done: true },
+      { name: 'Checkout: type, voucher, points, method', file: 'customer/checkout.html', done: true },
+      { name: 'GCash / Maya payment (from checkout)', file: 'customer/pay.html', done: true, flowOnly: true },
+      { name: 'Success and receipt (after paying)', file: 'customer/success.html', done: true, flowOnly: true },
+      { name: 'My orders and tracker', file: 'customer/track.html', done: true }
     ]},
     { name: 'Cashier', screens: [
       { name: 'POS: walk-in orders', file: 'cashier/pos.html' },
@@ -165,7 +165,9 @@
 
   document.getElementById('screens').innerHTML = areas.map(a => {
     const built = a.screens.filter(s => s.done).length;
-    const rows = a.screens.map(s => s.done
+    const rows = a.screens.map(s => s.flowOnly
+      ? `<li><span><span style="color:var(--ink)">${s.name}</span><span class="f">${s.file}</span><span class="chip chip-green">Ready</span></span></li>`
+      : s.done
       ? `<li><a href="${s.file}"><span>${s.name}</span><span class="f">${s.file.split('?')[0]}</span><span class="chip chip-green">Ready</span></a></li>`
       : `<li><span><span>${s.name}</span><span class="f">${s.file}</span><span class="chip" style="background:var(--sunk)">Planned</span></span></li>`
     ).join('');

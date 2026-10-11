@@ -27,7 +27,10 @@
       <span class="brand"><span class="brand-mark">B&amp;B</span><span class="brand-name">Brew &amp; Bite Café</span></span>
       <span class="session-pill" id="sessionPill"></span>
     </div>
-    <h1>What are you craving today?</h1>
+    <div class="c-head-row">
+      <h1>What are you craving today?</h1>
+      <a class="my-orders-link" id="myOrders" href="track.html" hidden>My orders</a>
+    </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="search" type="search" placeholder="Search drinks, meals, pastries" autocomplete="off" aria-label="Search the menu">
@@ -113,6 +116,12 @@
   if (!session) { $('gate').hidden = false; return; }
   $('app').hidden = false;
   $('sessionPill').textContent = session.type === 'dine-in' ? `TABLE ${session.table} · DINE-IN` : 'TAKE-OUT';
+  const myOrders = BB.orders.mine();
+  if (myOrders.length) {
+    const active = myOrders.filter(o => !['completed', 'cancelled'].includes(o.status)).length;
+    $('myOrders').hidden = false;
+    $('myOrders').textContent = active ? `My orders (${active} active)` : 'My orders';
+  }
 
   // ---- Promo ----
   $('promo').innerHTML = `<span>${esc(D.promo.text)}. Use code at checkout.</span><code>${esc(D.promo.code)}</code>`;
