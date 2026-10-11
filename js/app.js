@@ -1057,75 +1057,175 @@ window.BBViews = {};
 
 /* ===== index/index ===== */
 BBViews['index/index'] = function () {
-// Small decorative QR-like glyph (not a real code)
-  const qrGlyph = '<svg viewBox="0 0 21 21" fill="currentColor" aria-hidden="true"><path d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3zM0 14h7v7H0zm1 1v5h5v-5zm1 1h3v3H2zM9 0h2v2H9zM9 3h1v3H9zM11 4h2v2h-2zM8 8h3v1H8zM12 8h2v2h-2zM15 8h2v1h-2zM18 8h3v2h-3zM9 10h2v2H9zM14 11h3v2h-3zM8 13h2v3H8zM11 14h2v2h-2zM14 14h1v4h-1zM16 15h2v2h-2zM19 14h2v3h-2zM9 18h3v3H9zM13 19h2v2h-2zM16 18h1v3h-1zM18 19h3v2h-3zM0 8h2v2H0zM3 9h2v2H3zM5 8h1v4H5z"/></svg>';
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
 
-  const grid = document.getElementById('qrGrid');
-  let html = '';
-  for (let t = 1; t <= BB_DATA.cafe.tables; t++) {
-    html += `<a class="qr" href="customer.html?table=${t}">${qrGlyph}<b>Table ${t}</b><small>Dine-in</small></a>`;
-  }
-  html += `<a class="qr takeout" href="customer.html?type=takeout">${qrGlyph}<b>Counter</b><small>Take-out</small></a>`;
-  grid.innerHTML = html;
+  const icon = {
+    qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3"/></svg>',
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg>',
+    till: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 8h4M7 11h7"/></svg>',
+    cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 10h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z"/><path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17M9 3v3M13 3v3"/></svg>',
+    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/></svg>',
+    chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'
+  };
 
-  // Screen inventory. "done" marks screens that exist.
-  const areas = [
-    { name: 'Public', screens: [
-      { name: 'Café homepage', file: 'home.html', done: true },
-      { name: 'Staff login', file: 'login.html', done: true }
+  // Demo login for a role, e.g. "cashier / cashier123"
+  const login = (role) => { const u = D.users.find(x => x.role === role && x.active !== false); return u ? `${u.username} / ${u.password}` : 'no active account'; };
+
+  const ROLES = [
+    { title: 'Public', who: 'Anyone · phone or laptop', icon: icon.globe, screens: [
+      { name: 'Café homepage', file: 'home.html' },
+      { name: 'Staff login', file: 'login.html' }
     ]},
-    { name: 'Customer', screens: [
-      { name: 'Menu (opened by QR scan)', file: 'customer.html?table=5', done: true },
-      { name: 'Cart', file: 'customer.html?view=cart', done: true },
-      { name: 'Checkout: type, voucher, points, method', file: 'customer.html?view=checkout', done: true },
-      { name: 'GCash / Maya payment (from checkout)', file: 'customer.html?view=pay', done: true, flowOnly: true },
-      { name: 'Success and receipt (after paying)', file: 'customer.html?view=success', done: true, flowOnly: true },
-      { name: 'My orders and tracker', file: 'customer.html?view=track', done: true }
+    { title: 'Customer', who: 'Own phone, after scanning a table QR', icon: icon.phone, screens: [
+      { name: 'Menu', file: 'customer.html?table=5' },
+      { name: 'Cart', file: 'customer.html?view=cart' },
+      { name: 'Checkout', file: 'customer.html?view=checkout' },
+      { name: 'GCash / Maya payment', file: 'customer.html?view=pay', flow: 'Opens from checkout' },
+      { name: 'Payment success and receipt', file: 'customer.html?view=success', flow: 'Opens after paying' },
+      { name: 'My orders and tracker', file: 'customer.html?view=track' }
     ]},
-    { name: 'Cashier', screens: [
-      { name: 'POS: walk-in orders', file: 'cashier.html', done: true },
-      { name: 'Orders: payments, cancel, void, serve', file: 'cashier.html?view=orders', done: true },
-      { name: 'Payment and senior/PWD discount (from Orders)', file: 'cashier.html?view=payment', done: true, flowOnly: true },
-      { name: 'Receipt (after payment)', file: 'cashier.html?view=receipt', done: true, flowOnly: true }
+    { title: 'Cashier', role: 'cashier', who: 'Counter tablet or PC', icon: icon.till, badge: 'unpaid', screens: [
+      { name: 'Point of sale', file: 'cashier.html' },
+      { name: 'Orders and payments', file: 'cashier.html?view=orders' },
+      { name: 'Take payment, senior/PWD discount', file: 'cashier.html?view=payment', flow: 'Opens from Orders' },
+      { name: 'Receipt', file: 'cashier.html?view=receipt', flow: 'Opens after payment' }
     ]},
-    { name: 'Kitchen', screens: [
-      { name: 'Kitchen display and sold-out switches', file: 'kitchen.html', done: true }
+    { title: 'Kitchen', role: 'kitchen', who: 'Wall-mounted screen', icon: icon.cup, badge: 'kitchen', screens: [
+      { name: 'Kitchen display and sold-out switches', file: 'kitchen.html' }
     ]},
-    { name: 'Inventory', screens: [
-      { name: 'Ingredients and stock', file: 'inventory.html', done: true },
-      { name: 'Low-stock alerts', file: 'inventory.html?view=alerts', done: true },
-      { name: 'Suppliers', file: 'inventory.html?view=suppliers', done: true },
-      { name: 'Purchase orders: create, send, receive', file: 'inventory.html?view=purchase-orders', done: true },
-      { name: 'Wastage and stock counts', file: 'inventory.html?view=wastage', done: true }
+    { title: 'Inventory', role: 'inventory', who: 'Stock clerk · back-office PC', icon: icon.box, badge: 'low', screens: [
+      { name: 'Ingredients and stock', file: 'inventory.html' },
+      { name: 'Low-stock alerts', file: 'inventory.html?view=alerts' },
+      { name: 'Suppliers', file: 'inventory.html?view=suppliers' },
+      { name: 'Purchase orders', file: 'inventory.html?view=purchase-orders' },
+      { name: 'Wastage and stock counts', file: 'inventory.html?view=wastage' }
     ]},
-    { name: 'Admin', screens: [
-      { name: 'Sales dashboard', file: 'admin.html', done: true },
-      { name: 'Reports: sales, best sellers, usage, wastage, payments', file: 'admin.html?view=reports', done: true },
-      { name: 'Menu, prices and availability', file: 'admin.html?view=menu', done: true },
-      { name: 'Recipes and costing', file: 'admin.html?view=recipes', done: true },
-      { name: 'Promos and vouchers', file: 'admin.html?view=promos', done: true },
-      { name: 'Loyalty', file: 'admin.html?view=loyalty', done: true },
-      { name: 'Users and roles', file: 'admin.html?view=users', done: true },
-      { name: 'Audit logs', file: 'admin.html?view=audit', done: true }
+    { title: 'Admin', role: 'admin', who: 'Owner · laptop or phone', icon: icon.chart, screens: [
+      { name: 'Sales dashboard', file: 'admin.html' },
+      { name: 'Reports', file: 'admin.html?view=reports' },
+      { name: 'Menu and prices', file: 'admin.html?view=menu' },
+      { name: 'Recipes and costing', file: 'admin.html?view=recipes' },
+      { name: 'Promos and vouchers', file: 'admin.html?view=promos' },
+      { name: 'Loyalty', file: 'admin.html?view=loyalty' },
+      { name: 'Users and roles', file: 'admin.html?view=users' },
+      { name: 'Audit logs', file: 'admin.html?view=audit' }
     ]}
   ];
 
-  document.getElementById('screens').innerHTML = areas.map(a => {
-    const built = a.screens.filter(s => s.done).length;
-    const rows = a.screens.map(s => s.flowOnly
-      ? `<li><span><span style="color:var(--ink)">${s.name}</span><span class="f">${s.file}</span><span class="chip chip-green">Ready</span></span></li>`
-      : s.done
-      ? `<li><a href="${s.file}"><span>${s.name}</span><span class="f">${s.file.split('?')[0]}</span><span class="chip chip-green">Ready</span></a></li>`
-      : `<li><span><span>${s.name}</span><span class="f">${s.file}</span><span class="chip" style="background:var(--sunk)">Planned</span></span></li>`
-    ).join('');
-    return `<div class="area"><div class="area-head"><h3>${a.name}</h3><span class="mono muted" style="font-size:.72rem">${built}/${a.screens.length} built</span></div><ul>${rows}</ul></div>`;
-  }).join('');
+  const WALK = [
+    { title: 'Order as a customer', sub: 'Table 5 · choose cash at the counter', href: 'customer.html?table=5' },
+    { title: 'Take the payment', sub: () => `Cashier › Orders · <code>${esc(login('cashier'))}</code>`, href: 'cashier.html?view=orders' },
+    { title: 'Prepare and serve it', sub: () => `Kitchen display · <code>${esc(login('kitchen'))}</code>`, href: 'kitchen.html' },
+    { title: 'Check the stock it used', sub: () => `Inventory · <code>${esc(login('inventory'))}</code>`, href: 'inventory.html' },
+    { title: 'See it in the sales report', sub: () => `Admin dashboard · <code>${esc(login('admin'))}</code>`, href: 'admin.html' }
+  ];
 
-  document.getElementById('resetDemo').addEventListener('click', () => {
-    document.getElementById('resetMsg').textContent = BB.reset()
-      ? 'Demo data reset.'
-      : 'Could not reset: browser storage is blocked.';
+  $('walk').innerHTML = WALK.map(s => `
+    <li><a href="${s.href}" target="_blank" rel="noopener">
+      <b>${s.title}</b><span class="go" aria-hidden="true">↗</span>
+      <small>${typeof s.sub === 'function' ? s.sub() : esc(s.sub)}</small>
+    </a></li>`).join('');
+
+  function render() {
+    const orders = BB.orders.list();
+    const today = BB.ymd();
+    const active = orders.filter(o => !['completed', 'cancelled', 'voided'].includes(o.status));
+    const unpaid = orders.filter(BB.orders.unpaid).length;
+    const kitchen = orders.filter(o => ['paid', 'preparing', 'ready'].includes(o.status)).length;
+    const low = BB.inventory.ingredients().filter(i => BB.inventory.level(i) !== 'ok').length;
+    const todayCount = orders.filter(o => BB.ymd(new Date(o.createdAt)) === today).length;
+    const counts = { unpaid, kitchen, low };
+
+    const item = (n, label, attn) => `<span class="live-item ${n && attn ? 'attn' : n ? 'ok' : ''}"><span class="dot" aria-hidden="true"></span><b>${n}</b> ${label}</span>`;
+    $('live').innerHTML = item(todayCount, 'orders today') + item(unpaid, 'awaiting payment', true) + item(kitchen, 'in the kitchen') + item(low, 'low on stock', true);
+
+    // Floor plan: five tables seen from above (chairs around, QR standee in the middle) + delivery
+    const FLOOR = [
+      { t: 1, shape: 'round2' }, { t: 2, shape: 'round2' }, { t: 3, shape: 'square4' },
+      { t: 4, shape: 'square4' }, { t: 5, shape: 'long6' }
+    ];
+    // Icon style: thick rounded outlines, flat tan fill, seen from above.
+    // Chair = seat square + backrest line on the side away from the table.
+    const seat = (x, y, w, h) => `<rect class="fp-fill fp-ink" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/>`;
+    const back = (x1, y1, x2, y2) => `<line class="fp-ink" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    const chairL = (cx, cy) => seat(cx - 6, cy - 9, 12, 18) + back(cx - 11, cy - 11, cx - 11, cy + 11);
+    const chairR = (cx, cy) => seat(cx - 6, cy - 9, 12, 18) + back(cx + 11, cy - 11, cx + 11, cy + 11);
+    const chairT = (cx, cy) => seat(cx - 9, cy - 6, 18, 12) + back(cx - 11, cy - 11, cx + 11, cy - 11);
+    const chairB = (cx, cy) => seat(cx - 9, cy - 6, 18, 12) + back(cx - 11, cy + 11, cx + 11, cy + 11);
+    // QR card in the middle of the table
+    const qr = `<g transform="translate(51 41)"><rect class="fp-card fp-ink" width="18" height="18" rx="3" style="stroke-width:3"/>
+      <rect class="fp-dot" x="4.5" y="4.5" width="3.5" height="3.5"/><rect class="fp-dot" x="10" y="4.5" width="3.5" height="3.5"/><rect class="fp-dot" x="4.5" y="10" width="3.5" height="3.5"/><rect class="fp-dot" x="10.5" y="10.5" width="3" height="3"/></g>`;
+    const PLAN = {
+      round2: { seats: 2, svg: chairL(24, 50) + chairR(96, 50) + '<circle class="fp-fill fp-ink" cx="60" cy="50" r="24"/>' + qr },
+      square4: { seats: 4, svg: chairT(60, 16) + chairB(60, 84) + chairL(22, 50) + chairR(98, 50) + '<rect class="fp-fill fp-ink" x="36" y="28" width="48" height="44" rx="5"/>' + qr },
+      long6: { seats: 6, svg: [32, 60, 88].map(x => chairT(x, 16) + chairB(x, 84)).join('') + '<rect class="fp-fill fp-ink" x="16" y="30" width="88" height="40" rx="5"/>' + qr }
+    };
+    let tiles = '';
+    FLOOR.forEach(({ t, shape }) => {
+      const n = active.filter(o => o.type === 'dine-in' && o.table === t).length;
+      const p = PLAN[shape];
+      tiles += `<a class="spot${n ? ' busy' : ''}" href="customer.html?table=${t}" aria-label="Table ${t}, ${p.seats} seats${n ? `, ${n} open order${n > 1 ? 's' : ''}` : ', free'}">
+        <svg class="fp" viewBox="-14 -12 148 124" aria-hidden="true">${p.svg}</svg>
+        <span class="spot-label"><b>Table ${String(t).padStart(2, '0')}</b><small>${p.seats} seats</small></span>
+        <span class="state">${n ? `${n} open order${n > 1 ? 's' : ''}` : 'Free'}</span></a>`;
+    });
+    // Take-out and delivery start from the counter QR
+    const takeout = active.filter(o => o.type !== 'dine-in').length;
+    tiles += `<a class="spot rider${takeout ? ' busy' : ''}" href="customer.html?type=takeout" aria-label="Take-out and delivery${takeout ? `, ${takeout} open order${takeout > 1 ? 's' : ''}` : ''}">
+      <svg class="fp" viewBox="-14 -12 148 124" aria-hidden="true">
+        <line class="fp-ink" x1="6" y1="40" x2="18" y2="40"/><line class="fp-ink" x1="2" y1="52" x2="13" y2="52"/>
+        <rect class="fp-fill fp-ink" x="34" y="24" width="24" height="20" rx="3"/>
+        <circle class="fp-ink fp-none" cx="30" cy="72" r="12"/><circle class="fp-ink fp-none" cx="94" cy="72" r="12"/>
+        <path class="fp-ink fp-none" d="M30 72h24l12-20h16l12 20M54 52H40M82 52l-6-18h-8"/>
+        <circle class="fp-fill fp-ink" cx="70" cy="22" r="7"/>
+      </svg>
+      <span class="spot-label"><b>Take-out</b><small>&amp; delivery</small></span>
+      <span class="state">${takeout ? `${takeout} open order${takeout > 1 ? 's' : ''}` : 'Counter QR'}</span></a>`;
+    $('tables').innerHTML = tiles;
+
+    // Screens grouped by role
+    const BADGE = {
+      unpaid: () => counts.unpaid ? `<span class="chip chip-caramel">${counts.unpaid} unpaid</span>` : '',
+      kitchen: () => counts.kitchen ? `<span class="chip chip-green">${counts.kitchen} in queue</span>` : '',
+      low: () => counts.low ? `<span class="chip chip-caramel">${counts.low} low</span>` : ''
+    };
+    $('roles').innerHTML = ROLES.map(r => `
+      <article class="role">
+        <div class="role-head">
+          <span class="role-icon">${r.icon}</span>
+          <h3>${r.title}</h3>
+          ${r.badge ? BADGE[r.badge]() : ''}
+          <p>${r.who}</p>
+        </div>
+        ${r.role ? `<div class="login-hint"><span>Demo login</span><code>${esc(login(r.role))}</code></div>` : ''}
+        <ul>${r.screens.map(s => s.flow
+          ? `<li><div><span class="name">${s.name}</span><span class="path">${s.file}</span><span class="flow">${s.flow}</span></div></li>`
+          : `<li><a href="${s.file}"><span class="name">${s.name}</span><span class="path">${s.file}</span><span class="go" aria-hidden="true">→</span></a></li>`).join('')}
+        </ul>
+      </article>`).join('');
+  }
+
+  // Reset asks once more before wiping, since it can't be undone
+  const resetBtn = $('resetDemo');
+  let armed = null;
+  resetBtn.addEventListener('click', () => {
+    if (!armed) {
+      resetBtn.textContent = 'Click again to erase all demo orders';
+      resetBtn.classList.add('confirm');
+      armed = setTimeout(() => { armed = null; resetBtn.textContent = 'Reset demo data'; resetBtn.classList.remove('confirm'); }, 4000);
+      return;
+    }
+    clearTimeout(armed); armed = null;
+    resetBtn.textContent = 'Reset demo data';
+    resetBtn.classList.remove('confirm');
+    $('resetMsg').textContent = BB.reset() ? 'Demo data reset.' : 'Could not reset: browser storage is blocked.';
+    render();
   });
+
+  BBS.onOrdersChange(render);
 };
 
 /* ===== home/index ===== */
