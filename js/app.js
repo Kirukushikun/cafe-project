@@ -1230,24 +1230,76 @@ BBViews['index/index'] = function () {
 
 /* ===== home/index ===== */
 BBViews['home/index'] = function () {
-const D = BB_DATA;
-  document.getElementById('promoText').textContent = D.promo.text;
-  document.getElementById('promoCode').textContent = D.promo.code;
-  document.getElementById('addr').textContent = D.cafe.address;
-  document.getElementById('hours').textContent = D.cafe.hours;
-  document.getElementById('phone').textContent = D.cafe.phone;
-  document.getElementById('fb').textContent = D.cafe.facebook;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
 
-  // Favorites: every item tagged Best seller or New
-  const favs = D.items.filter(i => i.tags && !BB.menu.isSoldOut(i));
-  document.getElementById('favs').innerHTML = favs.map(i => `
+  $('promoText').textContent = D.promo.text;
+  $('promoCode').textContent = D.promo.code;
+  $('addr').textContent = D.cafe.address;
+  $('hours').textContent = D.cafe.hours;
+  $('phone').textContent = D.cafe.phone;
+  $('fb').textContent = D.cafe.facebook;
+
+  // ---- What's in the glass: layers listed bottom to top, heights in % of the glass ----
+  const CUPS = [
+    { id: 'spanish', tab: 'Spanish Latte', note: 'Iced · our best seller', layers: [
+      ['Condensed milk', '30 ml', 12, '#D2A25A'], ['Fresh milk', '150 ml', 44, '#EEE2CF'], ['Espresso', '2 shots', 24, '#5B3521'], ['Milk foam', '', 10, '#F7EFE3']] },
+    { id: 'matcha', tab: 'Matcha Latte', note: 'Ceremonial-grade matcha', layers: [
+      ['Fresh milk', '200 ml', 46, '#F0E6D4'], ['Matcha', '6 g whisked', 34, '#7E9B4F'], ['Matcha foam', '', 10, '#E3E8C8']] },
+    { id: 'brownsugar', tab: 'Brown Sugar', note: 'Warm pearls, cold milk', layers: [
+      ['Tapioca pearls', '60 g', 16, '#3A2214', 'pearls'], ['Brown sugar syrup', '40 ml', 14, '#8E4F21'], ['Fresh milk', '200 ml', 58, '#F1E6D5']] }
+  ].filter(c => D.items.some(i => i.id === c.id));
+  const MAX_LAYERS = 4;
+  $('glass').innerHTML = Array.from({ length: MAX_LAYERS }, () => '<span class="layer" style="height:0"></span>').join('');
+
+  $('cupTabs').innerHTML = CUPS.map((c, i) => {
+    const item = D.items.find(x => x.id === c.id);
+    return `<button type="button" role="tab" id="tab-${c.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}" data-i="${i}">${esc(c.tab)}</button>`;
+  }).join('');
+
+  function showCup(i) {
+    const c = CUPS[i], item = D.items.find(x => x.id === c.id);
+    $('cupTabs').querySelectorAll('button').forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+    $('glass').querySelectorAll('.layer').forEach((el, k) => {
+      const l = c.layers[k];
+      el.style.height = l ? l[2] + '%' : '0';
+      el.style.backgroundColor = l ? l[3] : 'transparent';
+      el.className = 'layer' + (l && l[4] ? ' ' + l[4] : '');
+    });
+    $('legend').innerHTML = c.layers.map(l => `<li><i style="background:${l[3]}"></i><span>${esc(l[0])}</span><span>${esc(l[1])}</span></li>`).join('');
+    $('cupName').textContent = item.name;
+    $('cupNote').textContent = c.note;
+    $('cupPrice').textContent = BB.peso(item.price);
+  }
+  let current = 0;
+  $('cupTabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) showCup(current = Number(b.dataset.i)); });
+  // Arrow keys move between tabs, like a native tab list
+  $('cupTabs').addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    current = (current + (e.key === 'ArrowRight' ? 1 : CUPS.length - 1)) % CUPS.length;
+    showCup(current);
+    $('cupTabs').querySelectorAll('button')[current].focus();
+  });
+  showCup(0);
+
+  // ---- Favorites: drinks drawn as glasses, food as plates ----
+  const art = (i) => {
+    if (D.drinkCats.includes(i.cat)) {
+      return `<span class="mini-glass" aria-hidden="true"><i style="height:24%;background:${i.tone[1]}"></i><i style="height:46%;background:linear-gradient(to top, ${i.tone[1]}, ${i.tone[0]})"></i><i style="height:12%;background:${i.tone[1]};opacity:.55"></i></span>`;
+    }
+    return `<span class="plate" aria-hidden="true"><i style="background:radial-gradient(circle at 35% 35%, ${i.tone[1]}, ${i.tone[0]})"></i></span>`;
+  };
+  const favs = D.items.filter(i => i.tags && i.tags.length && !BB.menu.isSoldOut(i));
+  $('favs').innerHTML = favs.map(i => `
     <article class="fav">
-      <div class="fav-img" style="background:linear-gradient(150deg, ${i.tone[0]}, ${i.tone[1]})">
-        ${i.tags.map(t => `<span class="chip" style="background:rgba(255,255,255,.9);color:var(--ink)">${t}</span>`).join('')}
+      <div class="fav-art">
+        <span class="tags">${i.tags.map(t => `<span class="chip ${t === 'New' ? 'chip-green' : 'chip-gold'}">${esc(t)}</span>`).join('')}</span>
+        ${art(i)}
       </div>
       <div class="fav-body">
-        <h3>${i.name}</h3>
-        <p>${i.desc}</p>
+        <h3>${esc(i.name)}</h3>
+        <p>${esc(i.desc)}</p>
         <span class="price">${BB.peso(i.price)}</span>
       </div>
     </article>`).join('');
