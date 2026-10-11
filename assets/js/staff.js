@@ -7,14 +7,14 @@
       { id: 'orders', label: 'Orders', href: '../cashier/orders.html', built: true, badge: 'awaiting' }
     ]},
     { group: 'Kitchen', roles: ['kitchen', 'admin'], links: [
-      { id: 'kitchen', label: 'Kitchen display', href: '../kitchen/display.html' }
+      { id: 'kitchen', label: 'Kitchen display', href: '../kitchen/display.html', built: true }
     ]},
     { group: 'Inventory', roles: ['inventory', 'admin'], links: [
-      { id: 'ingredients', label: 'Ingredients', href: '../inventory/ingredients.html' },
-      { id: 'alerts', label: 'Low-stock alerts', href: '../inventory/alerts.html' },
-      { id: 'suppliers', label: 'Suppliers', href: '../inventory/suppliers.html' },
-      { id: 'po', label: 'Purchase orders', href: '../inventory/purchase-orders.html' },
-      { id: 'wastage', label: 'Wastage', href: '../inventory/wastage.html' }
+      { id: 'ingredients', label: 'Ingredients', href: '../inventory/ingredients.html', built: true },
+      { id: 'alerts', label: 'Low-stock alerts', href: '../inventory/alerts.html', built: true, badge: 'lowstock' },
+      { id: 'suppliers', label: 'Suppliers', href: '../inventory/suppliers.html', built: true },
+      { id: 'po', label: 'Purchase orders', href: '../inventory/purchase-orders.html', built: true },
+      { id: 'wastage', label: 'Wastage & counts', href: '../inventory/wastage.html', built: true }
     ]},
     { group: 'Admin', roles: ['admin'], links: [
       { id: 'dashboard', label: 'Dashboard', href: '../admin/dashboard.html' },
@@ -70,8 +70,13 @@
   }
 
   function updateBadges() {
-    const n = BB.orders.list().filter(o => o.status === 'awaiting_payment').length;
+    const n = BB.orders.list().filter(BB.orders.unpaid).length;
     document.querySelectorAll('[data-badge="awaiting"]').forEach(b => { b.hidden = n === 0; b.textContent = n; });
+    const low = document.querySelectorAll('[data-badge="lowstock"]');
+    if (low.length) {
+      const k = BB.inventory.ingredients().filter(i => BB.inventory.level(i) !== 'ok').length;
+      low.forEach(b => { b.hidden = k === 0; b.textContent = k; });
+    }
   }
 
   function startClock() {

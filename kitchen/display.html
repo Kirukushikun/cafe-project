@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kitchen Display · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <style>
+    /* Wall screen: dark so tickets stand out across the kitchen */
+    :root {
+      --k-bg: #111512; --k-col: #181D19; --k-card: #222923; --k-line: #333C35;
+      --k-ink: #ECF0EC; --k-muted: #9AA59D;
+      --k-new: #5B9BF0; --k-prep: #E0A55A; --k-ready: #6CC593; --k-late: #F0796B;
+      color-scheme: dark;
+    }
+    html, body { height: 100%; }
+    body { background: var(--k-bg); color: var(--k-ink); display: flex; flex-direction: column; overflow: hidden; }
+    .k-head { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--k-line); flex-wrap: wrap; }
+    .k-head .brand { color: var(--k-ink); }
+    .k-head h1 { font-size: 1.15rem; }
+    .k-stats { display: flex; gap: 18px; font-size: .88rem; color: var(--k-muted); flex-wrap: wrap; }
+    .k-stats b { color: var(--k-ink); font-family: var(--mono); font-weight: 500; }
+    .k-tools { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .k-btn { background: var(--k-card); color: var(--k-ink); border: 1px solid var(--k-line); border-radius: 8px; padding: 7px 12px; font: 500 .85rem var(--body); cursor: pointer; }
+    .k-btn:hover { border-color: var(--k-muted); }
+    .k-btn.on { border-color: var(--k-ready); color: var(--k-ready); }
+    .k-btn:focus-visible { outline: 3px solid var(--k-new); outline-offset: 2px; }
+    .clock { font-family: var(--mono); color: var(--k-muted); font-size: .85rem; }
+    .who { font-size: .82rem; color: var(--k-muted); }
+
+    .board { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px; min-height: 0; }
+    .col { background: var(--k-col); border-radius: 12px; display: flex; flex-direction: column; min-height: 0; }
+    .col-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 3px solid var(--c); }
+    .col-head h2 { font-size: 1.05rem; letter-spacing: .02em; text-transform: uppercase; font-family: var(--mono); font-weight: 500; color: var(--c); }
+    .col-head span { font: 700 1.2rem var(--display); }
+    .col-new { --c: var(--k-new); } .col-prep { --c: var(--k-prep); } .col-ready { --c: var(--k-ready); }
+    .tickets { overflow-y: auto; padding: 12px; display: grid; gap: 12px; align-content: start; }
+    .empty { color: var(--k-muted); text-align: center; padding: 32px 12px; font-size: .9rem; }
+
+    .tk { background: var(--k-card); border-radius: 10px; border-top: 4px solid var(--c); display: grid; overflow: hidden; }
+    .tk.fresh { animation: flash 1s ease-in-out 3; }
+    @keyframes flash { 50% { box-shadow: 0 0 0 3px var(--k-new); } }
+    .tk-head { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; border-bottom: 1px solid var(--k-line); }
+    .tk-no { font: 800 1.35rem var(--display); }
+    .tk-where { font: 500 .95rem var(--mono); text-align: right; }
+    .tk-where.dine { color: var(--k-ready); }
+    .tk-meta { font-size: .78rem; color: var(--k-muted); }
+    .tk-time { font: 500 .85rem var(--mono); text-align: right; color: var(--k-muted); }
+    .tk-time.warn { color: var(--k-prep); }
+    .tk-time.late { color: var(--k-late); font-weight: 700; }
+    .tk-flag { margin: 8px 12px 0; font-size: .76rem; font-family: var(--mono); color: var(--k-prep); border: 1px dashed var(--k-prep); border-radius: 6px; padding: 3px 8px; justify-self: start; }
+    .tk-items { list-style: none; margin: 0; padding: 6px 0; }
+    .tk-items li { display: grid; grid-template-columns: 34px 1fr; gap: 6px; padding: 7px 12px; cursor: pointer; }
+    .tk-items li:hover { background: rgba(255, 255, 255, .03); }
+    .tk-items .q { font: 700 1.05rem var(--mono); }
+    .tk-items b { font-weight: 600; font-size: 1rem; }
+    .tk-items small { display: block; color: var(--k-muted); font-size: .84rem; line-height: 1.35; }
+    .tk-items .note { color: #1B211D; background: var(--k-prep); border-radius: 4px; padding: 1px 6px; margin-top: 3px; display: inline-block; font-weight: 600; font-size: .8rem; }
+    .tk-items li.done b, .tk-items li.done .q, .tk-items li.done small { text-decoration: line-through; opacity: .45; }
+    .tk-foot { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--k-line); }
+    .tk-go { background: var(--c); color: #111512; border: 0; border-radius: 8px; padding: 11px; font: 700 .95rem var(--body); cursor: pointer; }
+    .tk-go:focus-visible, .tk-alt:focus-visible { outline: 3px solid var(--k-ink); outline-offset: 2px; }
+    .tk-alt { background: transparent; color: var(--k-muted); border: 1px solid var(--k-line); border-radius: 8px; padding: 0 12px; font: 500 .85rem var(--body); cursor: pointer; }
+
+    .recent { border-top: 1px solid var(--k-line); padding: 8px 16px; display: flex; gap: 8px; align-items: center; overflow-x: auto; font-size: .82rem; color: var(--k-muted); }
+    .recent button { flex: none; background: var(--k-card); color: var(--k-ink); border: 1px solid var(--k-line); border-radius: 999px; padding: 4px 10px; font: .78rem var(--mono); cursor: pointer; }
+
+    /* Sold-out drawer */
+    .drawer-back { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 30; }
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 100%); background: var(--k-col); z-index: 31; display: flex; flex-direction: column; border-left: 1px solid var(--k-line); }
+    .drawer-head { padding: 14px 16px; border-bottom: 1px solid var(--k-line); display: flex; justify-content: space-between; align-items: center; }
+    .drawer-body { overflow-y: auto; padding: 8px 16px 16px; }
+    .drawer h3 { font: 500 .72rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--k-muted); margin: 14px 0 6px; }
+    .avail { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--k-line); font-size: .92rem; }
+    .toggle { position: relative; width: 44px; height: 24px; flex: none; }
+    .toggle input { opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; position: absolute; z-index: 1; }
+    .toggle span { position: absolute; inset: 0; background: var(--k-late); border-radius: 999px; transition: background .15s; }
+    .toggle span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+    .toggle input:checked + span { background: var(--k-ready); }
+    .toggle input:checked + span::after { transform: translateX(20px); }
+    .toggle input:focus-visible + span { outline: 3px solid var(--k-new); outline-offset: 2px; }
+    .avail.off { color: var(--k-late); }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; height: auto; }
+      .board { grid-template-columns: 1fr; }
+      .tickets { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+<header class="k-head">
+  <a class="brand" href="../index.html"><span class="brand-mark">B&amp;B</span></a>
+  <h1>Kitchen display</h1>
+  <div class="k-stats" id="stats"></div>
+  <div class="k-tools">
+    <span class="clock" id="clock"></span>
+    <button class="k-btn" type="button" id="soldOutBtn">Sold-out items</button>
+    <button class="k-btn" type="button" id="soundBtn" aria-pressed="false">Sound off</button>
+    <button class="k-btn" type="button" id="fsBtn">Full screen</button>
+    <span class="who" id="who"></span>
+    <button class="k-btn" type="button" id="logout">Log out</button>
+  </div>
+</header>
+
+<main class="board">
+  <section class="col col-new"><div class="col-head"><h2>New</h2><span id="nNew">0</span></div><div class="tickets" id="colNew"></div></section>
+  <section class="col col-prep"><div class="col-head"><h2>Preparing</h2><span id="nPrep">0</span></div><div class="tickets" id="colPrep"></div></section>
+  <section class="col col-ready"><div class="col-head"><h2>Ready</h2><span id="nReady">0</span></div><div class="tickets" id="colReady"></div></section>
+</main>
+
+<div class="recent" id="recent"></div>
+
+<div class="drawer-back" id="drawerBack" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Menu availability">
+  <div class="drawer-head"><h2 style="font-size:1.1rem">Menu availability</h2><button class="k-btn" type="button" id="drawerClose">Done</button></div>
+  <div class="drawer-body" id="availList"></div>
+</aside>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['kitchen'], 'kitchen');
+  if (!user) return;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+  $('who').textContent = user.name;
+  $('logout').addEventListener('click', () => { BB.staff.logout(); location.href = '../login.html'; });
+
+  // Ticked-off items per order (so the barista can track a long ticket)
+  const doneItems = () => BB.get('kdsDone', {});
+  function toggleItem(orderId, lineId) {
+    const all = doneItems();
+    const list = all[orderId] || [];
+    all[orderId] = list.includes(lineId) ? list.filter(x => x !== lineId) : list.concat(lineId);
+    BB.set('kdsDone', all);
+  }
+
+  // Which orders the kitchen sees: paid ones, plus cash-on-delivery orders that pay on arrival
+  const inKitchen = (o) => ['paid', 'preparing', 'ready'].includes(o.status) || (o.status === 'awaiting_payment' && BB.orders.isCod(o));
+  const column = (o) => o.status === 'preparing' ? 'prep' : o.status === 'ready' ? 'ready' : 'new';
+  // Timer starts when the order reaches the kitchen
+  const startedAt = (o) => o.paidAt && !BB.orders.isCod(o) ? o.paidAt : o.createdAt;
+
+  function elapsed(iso) {
+    const s = Math.max(0, Math.floor((Date.now() - new Date(iso)) / 1000));
+    return { min: Math.floor(s / 60), text: Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') };
+  }
+
+  function where(o) {
+    if (o.type === 'dine-in') return `<span class="tk-where dine">TABLE ${o.table}</span>`;
+    if (o.type === 'delivery') return '<span class="tk-where">DELIVERY</span>';
+    return '<span class="tk-where">TAKE-OUT</span>';
+  }
+
+  function ticket(o) {
+    const col = column(o);
+    const t = elapsed(startedAt(o));
+    const timeCls = t.min >= 15 ? 'late' : t.min >= 10 ? 'warn' : '';
+    const done = doneItems()[o.id] || [];
+    const fresh = col === 'new' && Date.now() - new Date(startedAt(o)) < 15000;
+    const finish = o.type === 'dine-in' ? 'Served' : o.type === 'delivery' ? 'Handed to rider' : 'Picked up';
+    const btn = col === 'new' ? ['start', 'Start preparing'] : col === 'prep' ? ['ready', 'Mark ready'] : ['done', finish];
+    const alt = col === 'prep' ? ['back', 'Back'] : col === 'ready' ? ['recall', 'Recall'] : null;
+    return `
+      <article class="tk${fresh ? ' fresh' : ''}" data-id="${o.id}">
+        <div class="tk-head">
+          <span class="tk-no">#${o.orderNo.slice(-4)}</span>${where(o)}
+          <span class="tk-meta">${o.source === 'pos' ? 'Counter' : 'QR'}${o.customer.name ? ' · ' + esc(o.customer.name) : ''}</span>
+          <span class="tk-time ${timeCls}" data-start="${startedAt(o)}">${t.text}</span>
+        </div>
+        ${BB.orders.isCod(o) && !o.paidAt ? '<span class="tk-flag">Cash on delivery · rider collects</span>' : ''}
+        <ul class="tk-items">
+          ${o.items.map(l => `
+            <li class="${done.includes(l.id) ? 'done' : ''}" data-line="${l.id}" title="Tap to tick off">
+              <span class="q">${l.qty}×</span>
+              <span><b>${esc(l.name)}</b>${BBC.optionText(l) ? `<small>${esc(BBC.optionText(l))}</small>` : ''}${l.notes ? `<span class="note">${esc(l.notes)}</span>` : ''}</span>
+            </li>`).join('')}
+        </ul>
+        <div class="tk-foot" style="${alt ? '' : 'grid-template-columns:1fr'}">
+          <button class="tk-go" type="button" data-act="${btn[0]}">${btn[1]}</button>
+          ${alt ? `<button class="tk-alt" type="button" data-act="${alt[0]}">${alt[1]}</button>` : ''}
+        </div>
+      </article>`;
+  }
+
+  let lastNewCount = null;
+  function render() {
+    const all = BB.orders.list();
+    const live = all.filter(inKitchen).sort((a, b) => startedAt(a).localeCompare(startedAt(b)));
+    const cols = { new: [], prep: [], ready: [] };
+    live.forEach(o => cols[column(o)].push(o));
+
+    $('colNew').innerHTML = cols.new.map(ticket).join('') || '<p class="empty">No new orders. New paid orders appear here.</p>';
+    $('colPrep').innerHTML = cols.prep.map(ticket).join('') || '<p class="empty">Nothing in progress.</p>';
+    $('colReady').innerHTML = cols.ready.map(ticket).join('') || '<p class="empty">Nothing waiting to be served.</p>';
+    $('nNew').textContent = cols.new.length;
+    $('nPrep').textContent = cols.prep.length;
+    $('nReady').textContent = cols.ready.length;
+
+    // Average prep time today: from reaching the kitchen to Ready
+    const today = BB.ymd();
+    const times = all.filter(o => BB.ymd(new Date(o.createdAt)) === today).map(o => {
+      const r = o.statusLog.find(s => s.status === 'ready');
+      return r ? (new Date(r.at) - new Date(startedAt(o))) / 60000 : null;
+    }).filter(x => x !== null);
+    const avg = times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) + ' min' : '–';
+    const servedToday = all.filter(o => o.status === 'completed' && BB.ymd(new Date(o.createdAt)) === today).length;
+    $('stats').innerHTML = `<span>In queue <b>${live.length}</b></span><span>Avg prep today <b>${avg}</b></span><span>Done today <b>${servedToday}</b></span>`;
+
+    // Recently finished, so a mistake can be recalled
+    const recent = all.filter(o => o.status === 'completed').sort((a, b) => b.statusLog.at(-1).at.localeCompare(a.statusLog.at(-1).at)).slice(0, 6);
+    $('recent').innerHTML = recent.length ? `<span>Recently done:</span>${recent.map(o => `<button type="button" data-recall="${o.id}" title="Recall to Ready">#${o.orderNo.slice(-4)} ↺</button>`).join('')}` : '<span>Finished orders will appear here.</span>';
+
+    if (lastNewCount !== null && cols.new.length > lastNewCount) beep();
+    lastNewCount = cols.new.length;
+  }
+
+  // ---- Ticket actions ----
+  document.querySelector('.board').addEventListener('click', (e) => {
+    const card = e.target.closest('.tk'); if (!card) return;
+    const o = BB.orders.get(card.dataset.id);
+    const item = e.target.closest('li[data-line]');
+    if (item) { toggleItem(o.id, Number(item.dataset.line)); render(); return; }
+    const b = e.target.closest('button[data-act]'); if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'start') { BB.orders.update(o.id, { status: 'preparing', kitchenBy: user.name }); BB.audit.log('Started preparing', o.orderNo); }
+    if (act === 'ready') { BB.orders.update(o.id, { status: 'ready' }); BB.audit.log('Marked ready', o.orderNo); }
+    if (act === 'back') BB.orders.update(o.id, { status: o.paidAt ? 'paid' : 'awaiting_payment' });
+    if (act === 'recall') BB.orders.update(o.id, { status: 'preparing' });
+    if (act === 'done') { BB.orders.update(o.id, { status: 'completed' }); BB.audit.log('Completed order', `${o.orderNo} · ${o.type}`); }
+    check();
+  });
+  $('recent').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-recall]'); if (!b) return;
+    const o = BB.orders.get(b.dataset.recall);
+    BB.orders.update(o.id, { status: 'ready' });
+    BB.audit.log('Recalled order', o.orderNo);
+    check();
+  });
+
+  // Timers tick every second without redrawing the whole board
+  setInterval(() => {
+    document.querySelectorAll('.tk-time').forEach(el => {
+      const t = elapsed(el.dataset.start);
+      el.textContent = t.text;
+      el.classList.toggle('warn', t.min >= 10 && t.min < 15);
+      el.classList.toggle('late', t.min >= 15);
+    });
+  }, 1000);
+
+  // ---- Sound for new orders (browsers only allow it after a click) ----
+  let sound = false, ctx = null;
+  $('soundBtn').addEventListener('click', () => {
+    sound = !sound;
+    if (sound && !ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { sound = false; } }
+    $('soundBtn').textContent = sound ? 'Sound on' : 'Sound off';
+    $('soundBtn').classList.toggle('on', sound);
+    $('soundBtn').setAttribute('aria-pressed', String(sound));
+    if (sound) beep();
+  });
+  function beep() {
+    if (!sound || !ctx) return;
+    [0, .18].forEach(d => {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.frequency.value = 880; g.gain.value = .15;
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(ctx.currentTime + d); osc.stop(ctx.currentTime + d + .12);
+    });
+  }
+
+  $('fsBtn').addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  });
+
+  // ---- Sold-out drawer ----
+  function renderAvail() {
+    $('availList').innerHTML = D.categories.map(c => `
+      <h3>${esc(c.name)}</h3>
+      ${D.items.filter(i => i.cat === c.id).map(i => {
+        const avail = !BB.menu.isSoldOut(i);
+        return `<label class="avail${avail ? '' : ' off'}"><span>${esc(i.name)}${avail ? '' : ' · sold out'}</span>
+          <span class="toggle"><input type="checkbox" data-item="${i.id}" ${avail ? 'checked' : ''} aria-label="${esc(i.name)} available"><span></span></span></label>`;
+      }).join('')}`).join('');
+  }
+  $('availList').addEventListener('change', (e) => {
+    const item = D.items.find(i => i.id === e.target.dataset.item);
+    if (!item) return;
+    BB.menu.setSoldOut(item, !e.target.checked);
+    renderAvail();
+  });
+  const openDrawer = (open) => { $('drawer').hidden = !open; $('drawerBack').hidden = !open; if (open) renderAvail(); };
+  $('soldOutBtn').addEventListener('click', () => openDrawer(true));
+  $('drawerClose').addEventListener('click', () => openDrawer(false));
+  $('drawerBack').addEventListener('click', () => openDrawer(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') openDrawer(false); });
+
+  // Redraw when orders or ticked items change (any tab)
+  let last = '';
+  function check() {
+    let raw = '';
+    try { raw = (localStorage.getItem('bb_orders') || '') + (localStorage.getItem('bb_kdsDone') || ''); } catch (e) { /* storage blocked */ }
+    if (raw !== last) { last = raw; render(); }
+  }
+  window.addEventListener('storage', check);
+  setInterval(check, 2000);
+  check();
+})();
+</script>
+</body>
+</html>

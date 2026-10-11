@@ -160,6 +160,7 @@
   $('search').addEventListener('input', renderGrid);
 
   function renderGrid() {
+    D.items.forEach(i => { i.soldOut = BB.menu.isSoldOut(i); }); // kitchen's sold-out switches
     const q = $('search').value.trim().toLowerCase();
     const items = D.items.filter(i => (activeCat === 'all' || i.cat === activeCat) && (!q || i.name.toLowerCase().includes(q)));
     $('grid').innerHTML = items.map(i => `
@@ -327,6 +328,7 @@
 
   renderGrid();
   renderTicket();
+  window.addEventListener('storage', (e) => { if (e.key === 'bb_soldOut') renderGrid(); });
 })();
 </script>
 </body>

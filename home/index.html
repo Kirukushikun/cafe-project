@@ -244,7 +244,7 @@
   document.getElementById('fb').textContent = D.cafe.facebook;
 
   // Favorites: every item tagged Best seller or New
-  const favs = D.items.filter(i => i.tags && !i.soldOut);
+  const favs = D.items.filter(i => i.tags && !BB.menu.isSoldOut(i));
   document.getElementById('favs').innerHTML = favs.map(i => `
     <article class="fav">
       <div class="fav-img" style="background:linear-gradient(150deg, ${i.tone[0]}, ${i.tone[1]})">

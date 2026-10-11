@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suppliers · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .sups { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .sup { display: grid; gap: 10px; align-content: start; }
+    .sup-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+    .sup h2 { font-size: 1.08rem; }
+    .sup dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: .86rem; }
+    .sup dt { color: var(--muted); }
+    .sup dd { margin: 0; overflow-wrap: anywhere; }
+    .supplies { display: flex; flex-wrap: wrap; gap: 4px; }
+    .supplies .chip { background: var(--sunk); color: var(--ink); }
+    .supplies .chip.low { background: var(--caramel-soft); color: var(--caramel); }
+    .supplies .chip.out { background: var(--danger-soft); color: var(--danger); }
+    .sup-foot { display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Suppliers</h1><div class="sub">Who we buy from and what they supply</div></div>
+      <div style="display:flex;gap:10px;align-items:center"><span class="clock" id="clock"></span><button class="btn btn-primary btn-sm" type="button" id="addBtn">+ Add supplier</button></div>
+    </header>
+    <div class="work-body">
+      <div class="toolbar"><input class="input grow" id="search" type="search" placeholder="Search suppliers or ingredients" style="max-width:340px" aria-label="Search suppliers"></div>
+      <div class="sups" id="sups"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-back" id="editBack" hidden>
+  <form class="modal" id="editForm" role="dialog" aria-modal="true" aria-labelledby="eTitle" novalidate>
+    <div class="modal-head"><h2 id="eTitle">Add supplier</h2><button type="button" class="x-btn" data-close aria-label="Close">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label class="lbl full">Business name<input class="input" id="eName"></label>
+        <label class="lbl">Contact person<input class="input" id="eContact"></label>
+        <label class="lbl">Phone<input class="input" id="ePhone" placeholder="09XX XXX XXXX"></label>
+        <label class="lbl full">Email<input class="input" id="eEmail" type="email"></label>
+        <label class="lbl full">Address<input class="input" id="eAddress"></label>
+        <label class="lbl">Delivery lead time (days)<input class="input" id="eLead" type="number" min="0" value="2"></label>
+        <label class="lbl">Payment terms<select class="input" id="eTerms"><option>COD</option><option>7 days</option><option>15 days</option><option>30 days</option></select></label>
+      </div>
+      <p class="err-msg" id="eErr" hidden></p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+      <button type="submit" class="btn btn-primary">Save supplier</button>
+    </div>
+  </form>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['inventory'], 'suppliers');
+  if (!user) return;
+  const I = BB.inventory;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+
+  function render() {
+    const q = $('search').value.trim().toLowerCase();
+    const ings = I.ingredients();
+    const pos = I.purchaseOrders();
+    const list = I.suppliers().filter(s => {
+      if (!q) return true;
+      const supplies = ings.filter(i => i.supplier === s.id).map(i => i.name.toLowerCase()).join(' ');
+      return (s.name + ' ' + s.contact + ' ' + supplies).toLowerCase().includes(q);
+    });
+
+    $('sups').innerHTML = list.map(s => {
+      const supplies = ings.filter(i => i.supplier === s.id);
+      const open = pos.filter(p => p.supplier === s.id && (p.status === 'draft' || p.status === 'sent'));
+      const spent = pos.filter(p => p.supplier === s.id && p.status === 'received').reduce((n, p) => n + p.items.reduce((m, x) => m + (x.received != null ? x.received : x.qty) * x.cost, 0), 0);
+      const needs = supplies.filter(i => I.level(i) !== 'ok');
+      return `<article class="panel panel-pad sup">
+        <div class="sup-top"><h2>${esc(s.name)}</h2>${open.length ? `<span class="chip chip-gcash">${open.length} open PO</span>` : ''}</div>
+        <dl>
+          <dt>Contact</dt><dd>${esc(s.contact)}</dd>
+          <dt>Phone</dt><dd class="mono" style="font-size:.82rem">${esc(s.phone)}</dd>
+          <dt>Email</dt><dd>${esc(s.email)}</dd>
+          <dt>Address</dt><dd>${esc(s.address)}</dd>
+          <dt>Lead time</dt><dd>${s.leadDays} day(s) · ${esc(s.terms)}</dd>
+          <dt>Received</dt><dd>${BB.peso(spent, true)} in purchase orders</dd>
+        </dl>
+        <div><div class="hint" style="margin-bottom:4px">Supplies ${supplies.length} ingredient(s)</div>
+          <div class="supplies">${supplies.map(i => `<span class="chip ${I.level(i) === 'ok' ? '' : I.level(i)}">${esc(i.name)}</span>`).join('') || '<span class="muted">None assigned yet</span>'}</div></div>
+        <div class="sup-foot">
+          <a class="btn btn-primary btn-sm" href="purchase-orders.html?supplier=${s.id}${needs.length ? '&items=' + needs.map(i => i.id).join(',') : ''}">New purchase order${needs.length ? ` (${needs.length} low)` : ''}</a>
+          <button class="btn btn-ghost btn-sm" type="button" data-edit="${s.id}">Edit</button>
+        </div>
+      </article>`;
+    }).join('') || '<p class="muted">No suppliers match.</p>';
+  }
+
+  let editing = null;
+  function openEdit(id) {
+    editing = id ? I.supplier(id) : null;
+    $('eTitle').textContent = editing ? 'Edit supplier' : 'Add supplier';
+    $('eName').value = editing ? editing.name : '';
+    $('eContact').value = editing ? editing.contact : '';
+    $('ePhone').value = editing ? editing.phone : '';
+    $('eEmail').value = editing ? editing.email : '';
+    $('eAddress').value = editing ? editing.address : '';
+    $('eLead').value = editing ? editing.leadDays : 2;
+    $('eTerms').value = editing ? editing.terms : 'COD';
+    $('eErr').hidden = true;
+    $('editBack').hidden = false;
+    $('eName').focus();
+  }
+  $('addBtn').addEventListener('click', () => openEdit(null));
+  $('sups').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openEdit(b.dataset.edit); });
+
+  $('editForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const rec = {
+      name: $('eName').value.trim(), contact: $('eContact').value.trim(), phone: $('ePhone').value.trim(),
+      email: $('eEmail').value.trim(), address: $('eAddress').value.trim(),
+      leadDays: Math.max(0, parseInt($('eLead').value, 10) || 0), terms: $('eTerms').value
+    };
+    let err = '';
+    if (!rec.name) err = 'Enter the business name.';
+    else if (!rec.contact || !rec.phone) err = 'Enter a contact person and phone number.';
+    else if (rec.email && !/^\S+@\S+\.\S+$/.test(rec.email)) err = 'That email address doesn’t look right.';
+    if (err) { $('eErr').textContent = err; $('eErr').hidden = false; return; }
+
+    const list = I.suppliers();
+    if (editing) Object.assign(list.find(s => s.id === editing.id), rec);
+    else list.push(Object.assign({ id: 's' + Date.now().toString(36) }, rec));
+    I.saveSuppliers(list);
+    BB.audit.log(editing ? 'Edited supplier' : 'Added supplier', rec.name);
+    $('editBack').hidden = true;
+    BBC.toast('Saved ' + rec.name);
+    render();
+  });
+
+  document.querySelectorAll('.modal-back').forEach(back => {
+    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
+  $('search').addEventListener('input', render);
+  render();
+})();
+</script>
+</body>
+</html>

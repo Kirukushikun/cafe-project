@@ -37,12 +37,6 @@
         <div id="items" style="display:grid;gap:8px"></div>
       </section>
       <div class="btn-row" id="actions"></div>
-
-      <section class="card demo" id="demo">
-        <div class="card-head"><h2>Demo controls</h2><span class="chip chip-caramel">Mockup only</span></div>
-        <p>Stands in for the kitchen display until it is built. Customers would never see this. Cash payments are taken in the cashier’s Orders screen.</p>
-        <button class="btn btn-ghost" type="button" id="advance"></button>
-      </section>
     </div>
   </div>
 </div>
@@ -120,8 +114,11 @@
         <li class="now"><span class="tl-dot"></span><span><b>${word}</b><small>${BBC.esc(o.cancelReason || '')}</small></span><time>${hm(timeOf(o, o.status))}</time></li>`;
     } else {
       const rank = RANK[o.status];
+      // Cash on delivery: the kitchen starts before payment, so the payment step follows paidAt
+      if (BB.orders.isCod(o) && !o.paidAt) steps[1] = { key: 'paid', label: 'Pay the rider', sub: 'Cash on delivery' };
       $('timeline').innerHTML = steps.map((s, i) => {
-        const cls = i < rank || (i === rank && o.status === 'completed') ? 'done' : i === rank ? 'now' : 'todo';
+        let cls = i < rank || (i === rank && o.status === 'completed') ? 'done' : i === rank ? 'now' : 'todo';
+        if (i === 1 && BB.orders.isCod(o)) cls = o.paidAt ? 'done' : 'todo';
         const dot = cls === 'done' ? check : '';
         const t = i <= rank ? hm(timeOf(o, s.key)) : '';
         return `<li class="${cls}"><span class="tl-dot">${dot}</span><span><b>${s.label}</b>${s.sub && i <= rank ? `<small>${BBC.esc(s.sub)}</small>` : ''}</span><time>${t}</time></li>`;
@@ -139,16 +136,10 @@
     $('items').innerHTML = BBC.lineRows(o.items);
 
     // Actions
-    const canCancel = o.status === 'awaiting_payment';
+    const canCancel = o.status === 'awaiting_payment'; // COD orders lock once the kitchen starts
     $('actions').innerHTML = `
       ${canCancel ? '<button class="btn btn-danger" type="button" id="cancelOrder">Cancel order</button>' : ''}
       <a class="btn btn-primary" href="menu.html">Order more</a>`;
-
-    // Demo: move the order along as the cashier and kitchen would
-    // Cash payments are now taken in the cashier screen (Cashier › Orders)
-    const next = { paid: 'Kitchen starts preparing', preparing: 'Kitchen marks it ready', ready: `Mark as ${finalLabel(o).toLowerCase()}` }[o.status];
-    $('demo').hidden = !next;
-    if (next) $('advance').textContent = next + ' →';
   }
 
   $('actions').addEventListener('click', (e) => {
@@ -163,14 +154,6 @@
     if (o.pointsUsed) BB.loyalty.add(o.customer.mobile, o.customer.name, o.pointsUsed);
     BB.orders.update(o.id, { status: 'cancelled', cancelReason: 'Cancelled by customer' });
     BBC.toast('Order cancelled');
-    render();
-  });
-
-  $('advance').addEventListener('click', () => {
-    const o = BB.orders.get(currentId);
-    if (o.status === 'paid') BB.orders.update(o.id, { status: 'preparing' });
-    else if (o.status === 'preparing') BB.orders.update(o.id, { status: 'ready' });
-    else if (o.status === 'ready') BB.orders.update(o.id, { status: 'completed' });
     render();
   });
 

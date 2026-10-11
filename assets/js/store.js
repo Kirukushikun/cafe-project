@@ -136,7 +136,9 @@
         mine.push(order.id);
         set('myOrders', mine);
       }
-      return order;
+      // Cash-on-delivery goes straight to the kitchen, so its ingredients are used now
+      if (orders.isCod(order)) inventory.deductForOrder(order);
+      return orders.get(order.id);
     },
     update(id, patch) {
       const all = orders.list();
@@ -145,9 +147,15 @@
       if (patch.status && patch.status !== o.status) o.statusLog.push({ status: patch.status, at: new Date().toISOString() });
       Object.assign(o, patch);
       set('orders', all);
-      return o;
+      // Cancelled or voided after ingredients were deducted: put them back
+      if ((patch.status === 'cancelled' || patch.status === 'voided') && o.stockDeducted) inventory.returnForOrder(o);
+      return orders.get(id);
     },
-    mine: () => get('myOrders', []).map(orders.get).filter(Boolean)
+    mine: () => get('myOrders', []).map(orders.get).filter(Boolean),
+    // Still owes money (includes cash-on-delivery orders already in the kitchen)
+    unpaid: (o) => !o.paidAt && !['cancelled', 'voided'].includes(o.status),
+    // Cash-on-delivery orders go to the kitchen before they are paid
+    isCod: (o) => o.type === 'delivery' && o.method === 'CASH'
   };
 
   // ---- Payments ----
@@ -175,8 +183,14 @@
 
       const points = order.customer && order.customer.mobile ? loyalty.earnFor(order.total) : 0;
       if (points) loyalty.add(order.customer.mobile, order.customer.name, points);
-      orders.update(order.id, { status: 'paid', paidAt: now, method, paymentRef: p.referenceNo, pointsEarned: points });
+      // Cash-on-delivery orders may already be in the kitchen or delivered; keep their stage
+      const current = orders.get(order.id);
+      const patch = { paidAt: now, method, paymentRef: p.referenceNo, pointsEarned: points };
+      if (!current || current.status === 'awaiting_payment') patch.status = 'paid';
+      orders.update(order.id, patch);
       audit.log('Payment recorded', `${order.orderNo} · ${method} · ${peso(p.amount, true)} · ${p.referenceNo}`);
+      // Order confirmed: deduct recipe ingredients (skipped if already done, e.g. COD)
+      inventory.deductForOrder(orders.get(order.id));
       return p;
     },
     // Voids a paid order: payment marked VOIDED, loyalty points reversed, order status "voided"
@@ -189,6 +203,132 @@
       if (m && order.pointsUsed) loyalty.add(m, '', order.pointsUsed);
       orders.update(order.id, { status: 'voided', cancelReason: reason });
       audit.log('Voided order', `${order.orderNo} · ${peso(order.total, true)} · ${reason}`);
+    }
+  };
+
+  // ---- Menu availability (kitchen can mark items sold out; overrides data.js) ----
+  const menu = {
+    overrides: () => get('soldOut', {}),
+    // Manual switch from the kitchen wins; otherwise sold out when an ingredient can't cover one serving
+    isSoldOut(item) {
+      const o = menu.overrides();
+      if (item.id in o) return o[item.id];
+      return !!item.soldOut || inventory.shortFor(item).length > 0;
+    },
+    setSoldOut(item, value) {
+      const o = menu.overrides();
+      o[item.id] = value;
+      set('soldOut', o);
+      audit.log(value ? 'Marked sold out' : 'Marked available', item.name);
+    }
+  };
+
+  // ---- Inventory: ingredients, recipes, stock movements, suppliers, purchase orders ----
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const who = () => { const s = staff.current(); return s ? s.name : 'System (auto)'; };
+
+  const inventory = {
+    ingredients() {
+      let list = get('ingredients', null);
+      if (!list) { list = clone(window.BB_DATA.ingredients); set('ingredients', list); }
+      return list;
+    },
+    saveIngredients: (list) => set('ingredients', list),
+    ing: (id) => inventory.ingredients().find(i => i.id === id) || null,
+
+    suppliers() {
+      let list = get('suppliers', null);
+      if (!list) { list = clone(window.BB_DATA.suppliers); set('suppliers', list); }
+      return list;
+    },
+    saveSuppliers: (list) => set('suppliers', list),
+    supplier: (id) => inventory.suppliers().find(s => s.id === id) || null,
+
+    purchaseOrders() {
+      let list = get('purchaseOrders', null);
+      if (!list) { list = clone(window.BB_DATA.samplePOs); set('purchaseOrders', list); }
+      return list;
+    },
+    savePOs: (list) => set('purchaseOrders', list),
+
+    movements: () => get('movements', []),
+
+    // Changes stock and records why. qty is signed: negative uses stock, positive adds it.
+    move(ingId, qty, type, ref, note, user) {
+      const list = inventory.ingredients();
+      const ing = list.find(i => i.id === ingId);
+      if (!ing || !qty) return;
+      const before = ing.stock;
+      ing.stock = round2(ing.stock + qty);
+      inventory.saveIngredients(list);
+      const all = inventory.movements();
+      all.push({ id: 'm' + Date.now() + Math.random().toString(36).slice(2, 6), at: new Date().toISOString(), ing: ingId, qty: round2(qty), type, ref: ref || '', note: note || '', user: user || who(), cost: round2(Math.abs(qty) * ing.cost), before, after: ing.stock });
+      set('movements', all);
+    },
+
+    // Ingredient usage for one cart/order line: { ingId: qty }
+    usageForLine(line) {
+      const D = window.BB_DATA;
+      const item = D.items.find(i => i.id === line.itemId);
+      const use = {};
+      const add = (id, q) => { use[id] = (use[id] || 0) + q; };
+      if (!item) return use;
+      const large = (line.options || []).some(o => o.groupId === 'size' && o.id === 'l');
+      (D.recipes[item.id] || []).forEach(([id, q, scales]) => add(id, scales && large ? q * D.largeFactor : q));
+      if (D.drinkCats.includes(item.cat)) { add(large ? 'cup16' : 'cup12', 1); add('lid', 1); }
+      (line.options || []).forEach(o => {
+        const r = D.optionRecipes[o.groupId + ':' + o.id];
+        if (!r) return;
+        (r.add || []).forEach(([id, q]) => add(id, q));
+        if (r.replace && use[r.replace[0]]) { add(r.replace[1], use[r.replace[0]]); use[r.replace[0]] = 0; }
+      });
+      Object.keys(use).forEach(k => { use[k] = round2(use[k] * line.qty); if (!use[k]) delete use[k]; });
+      return use;
+    },
+    usageForOrder(order) {
+      const total = {};
+      order.items.forEach(l => {
+        const u = inventory.usageForLine(l);
+        Object.keys(u).forEach(k => { total[k] = round2((total[k] || 0) + u[k]); });
+      });
+      return total;
+    },
+    deductForOrder(order) {
+      if (!order || order.stockDeducted) return;
+      const use = inventory.usageForOrder(order);
+      const user = staff.current() ? staff.current().name : 'System (order)';
+      Object.keys(use).forEach(id => inventory.move(id, -use[id], 'SALE', order.orderNo, '', user));
+      orders.update(order.id, { stockDeducted: true });
+    },
+    returnForOrder(order) {
+      if (!order || !order.stockDeducted) return;
+      const use = inventory.usageForOrder(order);
+      Object.keys(use).forEach(id => inventory.move(id, use[id], 'RETURN', order.orderNo, `Order ${order.status}`));
+      orders.update(order.id, { stockDeducted: false });
+    },
+
+    // Ingredients that can't cover one basic serving of a menu item
+    shortFor(item) {
+      const use = inventory.usageForLine({ itemId: item.id, qty: 1, options: [] });
+      return Object.keys(use).filter(id => { const g = inventory.ing(id); return g && g.stock < use[id]; });
+    },
+    // Menu items whose recipe uses this ingredient
+    usedIn(ingId) {
+      const D = window.BB_DATA;
+      return D.items.filter(i => (D.recipes[i.id] || []).some(r => r[0] === ingId));
+    },
+    level(ing) {
+      if (ing.stock <= 0) return 'out';
+      if (ing.stock <= ing.reorder) return 'low';
+      return 'ok';
+    },
+    // 12400 g -> "12.4 kg", 850 ml -> "850 ml", 12 pc -> "12 pcs"
+    fmt(qty, unit) {
+      const n = Number(qty);
+      if (unit === 'g' && Math.abs(n) >= 1000) return round2(n / 1000).toLocaleString('en-PH') + ' kg';
+      if (unit === 'ml' && Math.abs(n) >= 1000) return round2(n / 1000).toLocaleString('en-PH') + ' L';
+      if (unit === 'pc') return round2(n).toLocaleString('en-PH') + (Math.abs(n) === 1 ? ' pc' : ' pcs');
+      return round2(n).toLocaleString('en-PH') + ' ' + unit;
     }
   };
 
@@ -253,5 +393,5 @@
     voided: { label: 'Voided', chip: 'chip-red' }
   };
 
-  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit };
+  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory };
 })();

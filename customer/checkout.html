@@ -251,6 +251,8 @@
     else if (isDelivery && !name) problem = 'Enter your name so the rider knows who to look for.';
     else if (isDelivery && !mobile) problem = 'Enter your mobile number so the rider can contact you.';
     else if (isDelivery && !$('address').value.trim()) problem = 'Enter your delivery address.';
+    const gone = lines.filter(l => { const it = D.items.find(i => i.id === l.itemId); return it && BB.menu.isSoldOut(it); });
+    if (!problem && gone.length) problem = `Sorry, ${gone.map(l => l.name).join(', ')} just sold out. Go back to your order and remove it.`;
     if (problem) {
       err.textContent = problem;
       err.hidden = false;

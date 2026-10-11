@@ -113,7 +113,7 @@
   if (!order) return showState('Order not found', 'It may have been removed when the demo data was reset.', '<a class="btn btn-primary" href="orders.html">Go to orders</a>');
   $('sub').textContent = `${order.orderNo} · ${BBC.orderTypeLabel(order)} · ${order.source === 'pos' ? 'Counter order' : 'QR order'}`;
   if (order.status === 'cancelled') return showState('This order was cancelled', order.cancelReason || '', '<a class="btn btn-primary" href="orders.html">Back to orders</a>');
-  if (order.status !== 'awaiting_payment') return showState('Already paid', `${order.orderNo} was paid by ${order.method} (${order.paymentRef}).`, `<a class="btn btn-primary" href="receipt.html?order=${order.id}">View receipt</a>`);
+  if (order.paidAt) return showState('Already paid', `${order.orderNo} was paid by ${order.method} (${order.paymentRef}).`, `<a class="btn btn-primary" href="receipt.html?order=${order.id}">View receipt</a>`);
 
   function showState(h, p, actions) {
     $('state').hidden = false;

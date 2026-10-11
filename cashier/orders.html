@@ -86,7 +86,7 @@
   const METHOD = { GCASH: 'GCash', MAYA: 'Maya', CASH: 'Cash' };
 
   const TABS = [
-    { id: 'awaiting', label: 'Awaiting payment', test: o => o.status === 'awaiting_payment' },
+    { id: 'awaiting', label: 'Awaiting payment', test: BB.orders.unpaid },
     { id: 'active', label: 'In progress', test: o => ['paid', 'preparing', 'ready'].includes(o.status) },
     { id: 'done', label: 'Completed', test: o => o.status === 'completed' },
     { id: 'cancelled', label: 'Cancelled / voided', test: o => ['cancelled', 'voided'].includes(o.status) },
@@ -101,7 +101,7 @@
     const paidToday = BB.payments.list().filter(p => p.status === 'PAID' && BB.ymd(new Date(p.paidAt)) === today);
     const sales = paidToday.reduce((n, p) => n + p.amount, 0);
     const cash = paidToday.filter(p => p.method === 'CASH').reduce((n, p) => n + p.amount, 0);
-    const waiting = all.filter(o => o.status === 'awaiting_payment').length;
+    const waiting = all.filter(BB.orders.unpaid).length;
 
     $('kpis').innerHTML = `
       <div class="kpi${waiting ? ' alert' : ''}"><small>Awaiting payment</small><strong>${waiting}</strong></div>
@@ -122,12 +122,13 @@
       const items = o.items.map(l => `${l.qty}× ${l.name}`).join(', ');
       const pay = o.paidAt ? `${METHOD[o.method]}<small class="mono">${o.paymentRef}</small>` : o.method ? `<span class="muted">${METHOD[o.method]} · unpaid</span>` : '<span class="muted">Not yet</span>';
       let acts = '';
-      if (o.status === 'awaiting_payment') acts = `<a class="btn btn-primary btn-sm" href="payment.html?order=${o.id}">Take payment</a><button class="btn btn-danger btn-sm" data-act="cancel" data-id="${o.id}">Cancel</button>`;
+      if (BB.orders.unpaid(o) && o.status !== 'awaiting_payment') acts = `<a class="btn btn-primary btn-sm" href="payment.html?order=${o.id}">Collect COD payment</a>${o.status === 'ready' ? `<button class="btn btn-ghost btn-sm" data-act="serve" data-id="${o.id}">Mark delivered</button>` : ''}`;
+      else if (o.status === 'awaiting_payment') acts = `<a class="btn btn-primary btn-sm" href="payment.html?order=${o.id}">Take payment</a><button class="btn btn-danger btn-sm" data-act="cancel" data-id="${o.id}">Cancel</button>`;
       else if (o.status === 'ready') acts = `<button class="btn btn-primary btn-sm" data-act="serve" data-id="${o.id}">${o.type === 'dine-in' ? 'Mark served' : o.type === 'delivery' ? 'Mark delivered' : 'Mark picked up'}</button><a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
       else if (['paid', 'preparing'].includes(o.status)) acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a><button class="btn btn-danger btn-sm" data-act="void" data-id="${o.id}">Void</button>`;
       else if (o.status === 'completed') acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
       else if (o.status === 'voided') acts = `<a class="btn btn-ghost btn-sm" href="receipt.html?order=${o.id}">Receipt</a>`;
-      return `<tr class="${o.status === 'awaiting_payment' ? 'waiting' : ''}">
+      return `<tr class="${BB.orders.unpaid(o) ? 'waiting' : ''}">
         <td><b class="mono">${o.orderNo}</b><small>${BBS.ago(o.createdAt)}${o.customer.name ? ' · ' + esc(o.customer.name) : ''}</small></td>
         <td>${BBC.orderTypeLabel(o)}<small>${o.source === 'pos' ? 'Counter' : 'QR order'}</small></td>
         <td class="items-cell">${esc(items)}${o.senior ? `<small>${o.senior.type} discount</small>` : ''}${o.cancelReason ? `<small>${esc(o.cancelReason)}</small>` : ''}</td>

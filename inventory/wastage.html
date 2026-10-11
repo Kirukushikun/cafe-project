@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wastage &amp; Stock Counts · Brew &amp; Bite Café</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/app.css">
+  <link rel="stylesheet" href="../assets/css/staff.css">
+  <style>
+    .forms { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+    .seg { display: inline-grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--sunk); padding: 3px; border-radius: 9px; }
+    .seg label { text-align: center; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-weight: 500; font-size: .85rem; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg label:has(input:checked) { background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .seg label:has(input:focus-visible) { outline: 3px solid var(--accent-soft); }
+    .unit-input { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+    .unit-input span { color: var(--muted); font-size: .85rem; min-width: 24px; }
+    .preview { background: var(--sunk); border-radius: 8px; padding: 10px 12px; font-size: .85rem; display: grid; gap: 3px; }
+    .preview b { font-variant-numeric: tabular-nums; }
+    .var-pos { color: var(--accent); } .var-neg { color: var(--danger); }
+    @media (max-width: 1000px) { .forms { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="staff">
+<div class="shell">
+  <aside class="side" id="side"></aside>
+  <div class="work">
+    <header class="work-head">
+      <div><h1>Wastage &amp; stock counts</h1><div class="sub">Record what was thrown away and correct stock after a physical count</div></div>
+      <span class="clock" id="clock"></span>
+    </header>
+    <div class="work-body">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="forms">
+        <!-- Wastage -->
+        <form class="panel panel-pad" id="wForm" novalidate>
+          <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <h2>Log wastage</h2>
+            <div class="seg" role="radiogroup" aria-label="What was wasted">
+              <label><input type="radio" name="wKind" value="ing" checked> Ingredient</label>
+              <label><input type="radio" name="wKind" value="item"> Menu item</label>
+            </div>
+          </div>
+          <label class="lbl" id="wIngWrap">Ingredient<select class="input" id="wIng"></select></label>
+          <label class="lbl" id="wItemWrap" hidden>Menu item (uses its recipe, Medium size)<select class="input" id="wItem"></select></label>
+          <div class="form-grid">
+            <label class="lbl">Quantity<span class="unit-input"><input class="input" id="wQty" type="number" min="0" step="any"><span id="wUnit"></span></span></label>
+            <label class="lbl">Reason<select class="input" id="wReason"></select></label>
+            <label class="lbl full">Note<input class="input" id="wNote" placeholder="Optional, e.g. milk past expiry date"></label>
+          </div>
+          <div class="preview" id="wPreview"></div>
+          <p class="err-msg" id="wErr" hidden></p>
+          <button class="btn btn-primary" type="submit">Record wastage</button>
+        </form>
+
+        <!-- Stock count -->
+        <form class="panel panel-pad" id="cForm" novalidate>
+          <h2>Stock count</h2>
+          <p class="hint">Count what is physically on the shelf. The system stock is corrected to match and the difference is recorded.</p>
+          <label class="lbl">Ingredient<select class="input" id="cIng"></select></label>
+          <label class="lbl">Counted quantity<span class="unit-input"><input class="input" id="cQty" type="number" min="0" step="any"><span id="cUnit"></span></span></label>
+          <div class="preview" id="cPreview"></div>
+          <p class="err-msg" id="cErr" hidden></p>
+          <button class="btn btn-primary" type="submit">Save count</button>
+        </form>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>History</h2>
+          <div class="tabs" id="tabs"></div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>When</th><th>Type</th><th>Ingredient</th><th class="r">Change</th><th class="r">Cost</th><th>Reason / note</th><th>By</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/data.js"></script>
+<script src="../assets/js/store.js"></script>
+<script src="../assets/js/customer.js"></script>
+<script src="../assets/js/staff.js"></script>
+<script>
+(function () {
+  const user = BBS.init(['inventory'], 'wastage');
+  if (!user) return;
+  const I = BB.inventory;
+  const D = BB_DATA;
+  const $ = (id) => document.getElementById(id);
+  const esc = BBC.esc;
+  const p2 = (n) => BB.peso(n, true);
+  let range = 'week';
+
+  // ---- Select options ----
+  function ingOptionsHtml() {
+    const cats = [...new Set(I.ingredients().map(i => i.cat))];
+    return cats.map(c => `<optgroup label="${esc(c)}">${I.ingredients().filter(i => i.cat === c).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
+  }
+  $('wIng').innerHTML = ingOptionsHtml();
+  $('cIng').innerHTML = ingOptionsHtml();
+  $('wItem').innerHTML = D.categories.map(c => `<optgroup label="${esc(c.name)}">${D.items.filter(i => i.cat === c.id).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
+  $('wReason').innerHTML = D.wasteReasons.map(r => `<option>${esc(r)}</option>`).join('');
+
+  const kind = () => document.querySelector('input[name="wKind"]:checked').value;
+
+  // What the wastage would remove from stock
+  function wasteUsage() {
+    const qty = parseFloat($('wQty').value) || 0;
+    if (kind() === 'ing') return qty ? { [$('wIng').value]: qty } : {};
+    return qty ? I.usageForLine({ itemId: $('wItem').value, qty, options: [] }) : {};
+  }
+
+  function updateW() {
+    const isItem = kind() === 'item';
+    $('wIngWrap').hidden = isItem;
+    $('wItemWrap').hidden = !isItem;
+    $('wUnit').textContent = isItem ? 'pcs' : I.ing($('wIng').value).unit;
+    $('wQty').step = isItem ? '1' : 'any';
+    const use = wasteUsage();
+    const ids = Object.keys(use);
+    const cost = ids.reduce((n, id) => n + use[id] * I.ing(id).cost, 0);
+    $('wPreview').innerHTML = ids.length
+      ? ids.map(id => { const g = I.ing(id); return `<span>${esc(g.name)}: −${I.fmt(use[id], g.unit)} <span class="muted">(${I.fmt(g.stock, g.unit)} → ${I.fmt(g.stock - use[id], g.unit)})</span></span>`; }).join('') + `<span>Cost of wastage: <b>${p2(cost)}</b></span>`
+      : '<span class="muted">Enter a quantity to see the stock change and cost.</span>';
+  }
+  function updateC() {
+    const g = I.ing($('cIng').value);
+    $('cUnit').textContent = g.unit;
+    const v = $('cQty').value;
+    if (v === '') { $('cPreview').innerHTML = `<span>System stock: <b>${I.fmt(g.stock, g.unit)}</b></span>`; return; }
+    const diff = (parseFloat(v) || 0) - g.stock;
+    $('cPreview').innerHTML = `<span>System stock: <b>${I.fmt(g.stock, g.unit)}</b></span>
+      <span>Difference: <b class="${diff >= 0 ? 'var-pos' : 'var-neg'}">${diff >= 0 ? '+' : ''}${I.fmt(diff, g.unit)}</b> (${p2(Math.abs(diff) * g.cost)})</span>`;
+  }
+  $('wForm').addEventListener('input', updateW);
+  $('wForm').addEventListener('change', updateW);
+  $('cForm').addEventListener('input', updateC);
+  $('cForm').addEventListener('change', updateC);
+
+  $('wForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const use = wasteUsage();
+    const qty = parseFloat($('wQty').value) || 0;
+    if (!(qty > 0)) { $('wErr').textContent = 'Enter a quantity greater than zero.'; $('wErr').hidden = false; return; }
+    if (kind() === 'item' && !Number.isInteger(qty)) { $('wErr').textContent = 'Enter a whole number of menu items.'; $('wErr').hidden = false; return; }
+    $('wErr').hidden = true;
+    const reason = $('wReason').value, note = $('wNote').value.trim();
+    const item = kind() === 'item' ? D.items.find(i => i.id === $('wItem').value) : null;
+    const ref = item ? `${qty} × ${item.name}` : '';
+    Object.keys(use).forEach(id => I.move(id, -use[id], 'WASTAGE', ref, [reason, note].filter(Boolean).join(' · ')));
+    BB.audit.log('Logged wastage', `${item ? ref : I.fmt(qty, I.ing($('wIng').value).unit) + ' ' + I.ing($('wIng').value).name} · ${reason}`);
+    BBC.toast('Wastage recorded');
+    $('wQty').value = ''; $('wNote').value = '';
+    updateW(); updateC(); render();
+  });
+
+  $('cForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('cQty').value;
+    if (v === '' || !(parseFloat(v) >= 0)) { $('cErr').textContent = 'Enter the counted quantity (0 if there is none).'; $('cErr').hidden = false; return; }
+    $('cErr').hidden = true;
+    const g = I.ing($('cIng').value);
+    const diff = BB.round2(parseFloat(v) - g.stock);
+    if (diff === 0) { BBC.toast('Count matches the system. Nothing to change.'); return; }
+    I.move(g.id, diff, 'ADJUST', '', 'Physical count');
+    BB.audit.log('Stock count', `${g.name}: ${I.fmt(g.stock, g.unit)} → ${I.fmt(parseFloat(v), g.unit)}`);
+    BBC.toast(`${g.name} corrected by ${diff > 0 ? '+' : ''}${I.fmt(diff, g.unit)}`);
+    $('cQty').value = '';
+    updateC(); updateW(); render();
+  });
+
+  // ---- KPIs + history ----
+  function inRange(iso) {
+    const d = new Date(iso), now = new Date();
+    if (range === 'today') return d.toDateString() === now.toDateString();
+    if (range === 'week') return now - d < 7 * 86400000;
+    return true;
+  }
+  function render() {
+    const moves = I.movements().filter(m => m.type === 'WASTAGE' || m.type === 'ADJUST');
+    const week = moves.filter(m => Date.now() - new Date(m.at) < 7 * 86400000);
+    const wasteWeek = week.filter(m => m.type === 'WASTAGE');
+    const wasteCost = wasteWeek.reduce((n, m) => n + m.cost, 0);
+    const byIng = {};
+    wasteWeek.forEach(m => { byIng[m.ing] = (byIng[m.ing] || 0) + m.cost; });
+    const top = Object.keys(byIng).sort((a, b) => byIng[b] - byIng[a])[0];
+    const adjNet = week.filter(m => m.type === 'ADJUST').reduce((n, m) => n + (m.qty > 0 ? m.cost : -m.cost), 0);
+    $('kpis').innerHTML = `
+      <div class="kpi${wasteCost ? ' warn' : ''}"><small>Wastage cost (7 days)</small><strong>${p2(wasteCost)}</strong></div>
+      <div class="kpi"><small>Wastage entries (7 days)</small><strong>${wasteWeek.length}</strong></div>
+      <div class="kpi"><small>Most wasted (by cost)</small><strong style="font-size:1.05rem">${top ? esc(I.ing(top).name) : '—'}</strong></div>
+      <div class="kpi"><small>Count adjustments (7 days)</small><strong>${adjNet >= 0 ? '+' : '−'}${p2(Math.abs(adjNet))}</strong></div>`;
+
+    $('tabs').innerHTML = [['today', 'Today'], ['week', 'Last 7 days'], ['all', 'All']].map(([id, l]) => `<button type="button" data-r="${id}" class="${id === range ? 'on' : ''}">${l}</button>`).join('');
+    const rows = moves.filter(m => inRange(m.at)).reverse();
+    $('rows').innerHTML = rows.map(m => {
+      const g = I.ing(m.ing) || { name: m.ing, unit: '' };
+      return `<tr>
+        <td>${BB.dateTime(m.at)}</td>
+        <td><span class="chip ${m.type === 'WASTAGE' ? 'chip-red' : 'chip-gcash'}">${m.type === 'WASTAGE' ? 'Wastage' : 'Count'}</span></td>
+        <td>${esc(g.name)}${m.ref ? `<small>${esc(m.ref)}</small>` : ''}</td>
+        <td class="r num ${m.qty > 0 ? 'var-pos' : 'var-neg'}">${m.qty > 0 ? '+' : ''}${I.fmt(m.qty, g.unit)}</td>
+        <td class="r num">${p2(m.cost)}</td>
+        <td>${esc(m.note)}</td>
+        <td>${esc(m.user)}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7" class="empty-row">No wastage or stock counts recorded in this period.</td></tr>';
+  }
+  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { range = b.dataset.r; render(); } });
+
+  updateW(); updateC(); render();
+})();
+</script>
+</body>
+</html>
