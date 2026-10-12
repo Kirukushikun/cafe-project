@@ -227,14 +227,6 @@
       facebook: 'Brew & Bite Café Tarlac',
       tables: 14
     },
-    promo: { code: 'BREWBITE10', text: '10% off your order this October', percent: 10 },
-    // Vouchers customers can type at checkout
-    vouchers: [
-      { code: 'BREWBITE10', label: '10% off (max ₱100)', kind: 'percent', value: 10, max: 100, minSpend: 300, active: true },
-      { code: 'STUDENT20', label: '₱20 off', kind: 'fixed', value: 20, minSpend: 150, active: true },
-      { code: 'FREEDELIVERY', label: 'Free delivery', kind: 'delivery', value: 0, minSpend: 500, active: true },
-      { code: 'SWEETSEPT', label: '15% off', kind: 'percent', value: 15, minSpend: 0, active: false }
-    ],
     delivery: { fee: 50, area: 'Within Tarlac City only' },
     // Staff accounts (demo passwords are shown on the login screen)
     users: [
@@ -246,8 +238,6 @@
     ],
     // Senior citizen / PWD: VAT-exempt, then 20% off the eligible share
     seniorPwd: { percent: 20, vat: 0.12 },
-    // Loyalty: earn 1 point per ₱50 paid, 1 point = ₱1 off. Sample members:
-    loyalty: { pesoPerPoint: 50, minRedeem: 20, members: { '09171234567': { name: 'Andrea Santos', points: 86 }, '09981112222': { name: 'Paolo Reyes', points: 24 } } },
     categories,
     items,
     suppliers,
@@ -271,17 +261,15 @@
     none: { label: 'No options', groups: [] }
   };
 
-  // Admin edits (menu, prices, recipes, vouchers, users, loyalty) are saved in browser storage
+  // Admin edits (menu, prices, recipes, users) are saved in browser storage
   // and replace these defaults on every page. "Reset demo data" brings the defaults back.
-  window.BB_DATA.overrideKeys = { items: 'menuItems', categories: 'menuCategories', recipes: 'recipes', vouchers: 'vouchers', users: 'users', promo: 'promo', loyaltyConfig: 'loyaltyConfig' };
+  window.BB_DATA.overrideKeys = { items: 'menuItems', categories: 'menuCategories', recipes: 'recipes', users: 'users' };
   try {
     const D = window.BB_DATA;
     Object.keys(D.overrideKeys).forEach(k => {
       const raw = localStorage.getItem('bb_' + D.overrideKeys[k]);
       if (raw === null) return;
-      const val = JSON.parse(raw);
-      if (k === 'loyaltyConfig') Object.assign(D.loyalty, val);
-      else D[k] = val;
+      D[k] = JSON.parse(raw);
     });
   } catch (e) { /* storage blocked: use defaults */ }
 })();
@@ -370,41 +358,6 @@
     clear: () => set('cart', [])
   };
 
-  // ---- Vouchers ----
-  // Returns { ok, amount, freeDelivery, message } for a code against a subtotal.
-  function checkVoucher(code, subtotal) {
-    const v = (window.BB_DATA.vouchers || []).find(x => x.code === String(code || '').trim().toUpperCase());
-    if (!v) return { ok: false, message: 'That voucher code does not exist. Check the spelling and try again.' };
-    if (!v.active) return { ok: false, message: `${v.code} has already expired.` };
-    if (subtotal < v.minSpend) return { ok: false, message: `${v.code} needs a minimum order of ${peso(v.minSpend)}. Add ${peso(v.minSpend - subtotal)} more.` };
-    let amount = 0;
-    if (v.kind === 'percent') amount = Math.min(round2(subtotal * v.value / 100), v.max || Infinity);
-    if (v.kind === 'fixed') amount = v.value;
-    return { ok: true, code: v.code, label: v.label, amount, freeDelivery: v.kind === 'delivery' };
-  }
-
-  // ---- Loyalty (sample members live in data.js; earned points are added here) ----
-  const loyalty = {
-    member(mobile) {
-      const base = (window.BB_DATA.loyalty.members || {})[mobile];
-      const extra = get('loyalty', {})[mobile];
-      if (!base && !extra) return null;
-      return {
-        name: (base && base.name) || (extra && extra.name) || '',
-        points: (base ? base.points : 0) + (extra ? extra.points : 0)
-      };
-    },
-    add(mobile, name, points) {
-      const all = get('loyalty', {});
-      const rec = all[mobile] || { name: name || '', points: 0 };
-      rec.points += points;
-      if (name && !rec.name) rec.name = name;
-      all[mobile] = rec;
-      set('loyalty', all);
-    },
-    earnFor: (amount) => Math.floor(amount / window.BB_DATA.loyalty.pesoPerPoint)
-  };
-
   // ---- Orders ----
   const orders = {
     list: () => get('orders', []),
@@ -469,11 +422,9 @@
       all.push(p);
       set('payments', all);
 
-      const points = order.customer && order.customer.mobile ? loyalty.earnFor(order.total) : 0;
-      if (points) loyalty.add(order.customer.mobile, order.customer.name, points);
       // Cash-on-delivery orders may already be in the kitchen or delivered; keep their stage
       const current = orders.get(order.id);
-      const patch = { paidAt: now, method, paymentRef: p.referenceNo, pointsEarned: points };
+      const patch = { paidAt: now, method, paymentRef: p.referenceNo };
       if (!current || current.status === 'awaiting_payment') patch.status = 'paid';
       orders.update(order.id, patch);
       audit.log('Payment recorded', `${order.orderNo} · ${method} · ${peso(p.amount, true)} · ${p.referenceNo}`);
@@ -481,14 +432,11 @@
       inventory.deductForOrder(orders.get(order.id));
       return p;
     },
-    // Voids a paid order: payment marked VOIDED, loyalty points reversed, order status "voided"
+    // Voids a paid order: payment marked VOIDED, order status "voided"
     voidOrder(order, reason) {
       const all = payments.list();
       const p = all.find(x => x.orderId === order.id);
       if (p) { p.status = 'VOIDED'; p.voidedAt = new Date().toISOString(); p.voidReason = reason; set('payments', all); }
-      const m = order.customer && order.customer.mobile;
-      if (m && order.pointsEarned) loyalty.add(m, '', -order.pointsEarned);
-      if (m && order.pointsUsed) loyalty.add(m, '', order.pointsUsed);
       orders.update(order.id, { status: 'voided', cancelReason: reason });
       audit.log('Voided order', `${order.orderNo} · ${peso(order.total, true)} · ${reason}`);
     }
@@ -620,13 +568,12 @@
     }
   };
 
-  // ---- Admin: save catalog changes (menu, recipes, vouchers, users, promo, loyalty settings) ----
+  // ---- Admin: save catalog changes (menu, recipes, users) ----
   const admin = {
     save(key, value) {
       const D = window.BB_DATA;
       set(D.overrideKeys[key], value);
-      if (key === 'loyaltyConfig') Object.assign(D.loyalty, value);
-      else D[key] = value;
+      D[key] = value;
     }
   };
 
@@ -675,7 +622,6 @@
           let discount = 0, discountType = '';
           const roll = r();
           if (roll < 0.06) { discount = seniorDiscount(subtotal, 1, Math.max(1, nLines)); discountType = 'Senior/PWD'; }
-          else if (roll < 0.11 && subtotal >= 150) { discount = 20; discountType = 'Voucher'; }
           const deliveryFee = type === 'delivery' ? D.delivery.fee : 0;
           out.push({ sample: true, orderNo: 'SAMPLE', paidAt: at.toISOString(), createdAt: at.toISOString(), items: lines, subtotal: round2(subtotal), discount: round2(discount), discountType, deliveryFee, total: round2(subtotal - discount + deliveryFee), method, type, source: r() < 0.7 ? 'qr' : 'pos' });
         }
@@ -687,28 +633,13 @@
     sales(from, to, includeSample) {
       const real = orders.list().filter(o => o.paidAt && o.status !== 'voided').map(o => ({
         sample: false, orderNo: o.orderNo, paidAt: o.paidAt, createdAt: o.createdAt, items: o.items, subtotal: o.subtotal,
-        discount: round2((o.voucher ? o.voucher.amount : 0) + (o.senior ? o.senior.amount : 0) + (o.pointsUsed || 0)),
-        discountType: o.senior ? 'Senior/PWD' : o.voucher ? 'Voucher' : o.pointsUsed ? 'Points' : '',
+        discount: o.senior ? o.senior.amount : 0,
+        discountType: o.senior ? 'Senior/PWD' : '',
         deliveryFee: o.deliveryFee || 0, total: o.total, method: o.method, type: o.type, source: o.source || 'qr'
       }));
       const all = (includeSample === false ? [] : history.sample()).concat(real);
       return all.filter(o => { const t = new Date(o.paidAt); return t >= from && t < to; });
     },
-    // Sample wastage (one or two entries a day) for days before today
-    sampleWastage() {
-      const out = [];
-      const perishable = [['milk', 500, 'Spoiled or expired'], ['croissant', 2, 'Spoiled or expired'], ['pearls', 300, 'Spoiled or expired'], ['beans', 36, 'Remade (wrong order)'], ['cream', 200, 'Spoiled or expired'], ['ensaymada', 1, 'Spoiled or expired'], ['oat', 240, 'Spilled or dropped'], ['egg', 2, 'Spilled or dropped']];
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      for (let d = 30; d >= 1; d--) {
-        const day = new Date(today.getTime() - d * 86400000);
-        const k = Number(ymd(day)) % perishable.length;
-        [perishable[k], perishable[(k + 3) % perishable.length]].slice(0, d % 3 === 0 ? 2 : 1).forEach(([ing, qty, reason], i) => {
-          const g = inventory.ing(ing);
-          if (g) out.push({ sample: true, at: new Date(day.getTime() + (20 + i) * 3600000).toISOString(), ing, qty: -qty, type: 'WASTAGE', note: reason, user: 'Sample data', cost: round2(qty * g.cost) });
-        });
-      }
-      return out;
-    }
   };
 
   // ---- Senior citizen / PWD discount ----
@@ -725,9 +656,7 @@
   // Total after every adjustment on the order
   function orderTotal(o) {
     const t = o.subtotal
-      - (o.voucher ? o.voucher.amount : 0)
       - (o.senior ? o.senior.amount : 0)
-      - (o.pointsUsed || 0)
       + (o.deliveryFee || 0);
     return round2(Math.max(0, t));
   }
@@ -772,7 +701,7 @@
     voided: { label: 'Voided', chip: 'chip-red' }
   };
 
-  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, checkVoucher, loyalty, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory, admin, history };
+  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory, admin, history };
 })();
 
 /* Brew & Bite Café — helpers shared by the customer screens */
@@ -857,11 +786,8 @@
     ]},
     { group: 'Admin', roles: ['admin'], links: [
       { id: 'dashboard', label: 'Dashboard', href: 'admin.html', built: true },
-      { id: 'reports', label: 'Reports', href: 'admin.html?view=reports', built: true },
       { id: 'menu', label: 'Menu & prices', href: 'admin.html?view=menu', built: true },
       { id: 'recipes', label: 'Recipes & costing', href: 'admin.html?view=recipes', built: true },
-      { id: 'promos', label: 'Promos & vouchers', href: 'admin.html?view=promos', built: true },
-      { id: 'loyalty', label: 'Loyalty', href: 'admin.html?view=loyalty', built: true },
       { id: 'users', label: 'Users & roles', href: 'admin.html?view=users', built: true },
       { id: 'audit', label: 'Audit logs', href: 'admin.html?view=audit', built: true }
     ]}
@@ -1105,11 +1031,8 @@ BBViews['index/index'] = function () {
     ]},
     { title: 'Admin', role: 'admin', who: 'Owner · laptop or phone', icon: icon.chart, screens: [
       { name: 'Sales dashboard', file: 'admin.html' },
-      { name: 'Reports', file: 'admin.html?view=reports' },
       { name: 'Menu and prices', file: 'admin.html?view=menu' },
       { name: 'Recipes and costing', file: 'admin.html?view=recipes' },
-      { name: 'Promos and vouchers', file: 'admin.html?view=promos' },
-      { name: 'Loyalty', file: 'admin.html?view=loyalty' },
       { name: 'Users and roles', file: 'admin.html?view=users' },
       { name: 'Audit logs', file: 'admin.html?view=audit' }
     ]}
@@ -1234,8 +1157,6 @@ BBViews['home/index'] = function () {
   const $ = (id) => document.getElementById(id);
   const esc = BBC.esc;
 
-  $('promoText').textContent = D.promo.text;
-  $('promoCode').textContent = D.promo.code;
   $('addr').textContent = D.cafe.address;
   $('hours').textContent = D.cafe.hours;
   $('phone').textContent = D.cafe.phone;
@@ -1317,7 +1238,7 @@ BBViews['login/login'] = function () {
     cashier: { pos: 'Point of sale', orders: 'Orders', payment: 'Take payment', receipt: 'Receipt' },
     kitchen: { display: 'Kitchen display' },
     inventory: { ingredients: 'Ingredients', alerts: 'Low-stock alerts', suppliers: 'Suppliers', 'purchase-orders': 'Purchase orders', wastage: 'Wastage & counts' },
-    admin: { dashboard: 'Dashboard', reports: 'Reports', menu: 'Menu & prices', recipes: 'Recipes & costing', promos: 'Promos & vouchers', loyalty: 'Loyalty', users: 'Users & roles', audit: 'Audit logs' }
+    admin: { dashboard: 'Dashboard', menu: 'Menu & prices', recipes: 'Recipes & costing', users: 'Users & roles', audit: 'Audit logs' }
   };
   const DEFAULT_VIEW = { cashier: 'pos', kitchen: 'display', inventory: 'ingredients', admin: 'dashboard' };
   function screenName(url) {
@@ -1472,9 +1393,6 @@ BBViews['customer/menu'] = function () {
     $('myOrders').hidden = false;
     $('myOrders').textContent = active ? `My orders (${active} active)` : 'My orders';
   }
-
-  // ---- Promo ----
-  $('promo').innerHTML = `<span>${esc(D.promo.text)}. Use code at checkout.</span><code>${esc(D.promo.code)}</code>`;
 
   // ---- Categories and menu ----
   $('catBar').innerHTML = D.categories.map(c => `<button type="button" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
@@ -1712,7 +1630,6 @@ BBViews['customer/checkout'] = function () {
 
   // Restore what the customer typed if they came back from the payment screen
   const saved = BB.get('checkoutForm', {});
-  let voucher = null;
 
   // ---- Order type ----
   const typeOptions = session.type === 'dine-in'
@@ -1746,99 +1663,29 @@ BBViews['customer/checkout'] = function () {
 
   const type = () => document.querySelector('input[name="type"]:checked').value;
   const method = () => document.querySelector('input[name="method"]:checked').value;
-
-  // ---- Loyalty member lookup ----
-  function mobileValid(m) { return /^09\d{9}$/.test(m); }
-  function memberInfo() {
-    const m = $('mobile').value.trim();
-    return mobileValid(m) ? BB.loyalty.member(m) : null;
-  }
-  function renderMember() {
-    const m = $('mobile').value.trim();
-    const member = memberInfo();
-    const box = $('memberBox');
-    if (!mobileValid(m)) { box.innerHTML = ''; return; }
-    if (!member) {
-      box.innerHTML = `<p class="msg ok">New member. You’ll earn ${BB.loyalty.earnFor(baseTotal())} points on this order.</p>`;
-      return;
-    }
-    if (!$('name').value.trim() && member.name) $('name').value = member.name;
-    const prev = $('usePoints');
-    const wasChecked = prev ? prev.checked : !!saved.usePoints;
-    const canRedeem = member.points >= D.loyalty.minRedeem;
-    const usable = Math.min(member.points, Math.floor(baseTotal()));
-    box.innerHTML = `
-      <div class="points-box"><strong>${member.points}</strong><span>points available${member.name ? ' for ' + BBC.esc(member.name) : ''}. 1 point = ₱1 off.</span></div>
-      ${canRedeem
-        ? `<label class="choice" style="margin-top:8px"><input type="checkbox" id="usePoints" ${wasChecked ? 'checked' : ''}><span><b>Use ${usable} points</b><small>Take ${BB.peso(usable)} off this order</small></span><span></span></label>`
-        : `<p class="muted" style="font-size:.82rem;margin-top:6px">You can use points once you have at least ${D.loyalty.minRedeem}.</p>`}`;
-  }
-
-  // ---- Voucher ----
-  function applyVoucher(code, quiet) {
-    const res = BB.checkVoucher(code, subtotal);
-    if (!res.ok) {
-      voucher = null;
-      if (!quiet) $('voucherMsg').innerHTML = `<p class="msg bad">${BBC.esc(res.message)}</p>`;
-    } else {
-      voucher = res;
-      $('voucherEntry').hidden = true;
-      $('voucherMsg').innerHTML = `<div class="msg ok card-head"><span><b>${res.code}</b> applied · ${BBC.esc(res.label)}</span><button type="button" class="link-btn" id="removeVoucher">Remove</button></div>`;
-    }
-    renderMember();
-    update();
-  }
-  $('applyVoucher').addEventListener('click', () => applyVoucher($('voucher').value));
-  $('voucher').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); applyVoucher($('voucher').value); } });
-  $('voucherMsg').addEventListener('click', (e) => {
-    if (e.target.id !== 'removeVoucher') return;
-    voucher = null;
-    $('voucher').value = '';
-    $('voucherEntry').hidden = false;
-    $('voucherMsg').innerHTML = '';
-    renderMember();
-    update();
-  });
+  const mobileValid = (m) => /^09\d{9}$/.test(m);
 
   // ---- Totals ----
-  function deliveryFee() {
-    if (type() !== 'delivery') return 0;
-    return voucher && voucher.freeDelivery ? 0 : D.delivery.fee;
-  }
-  function voucherAmount() { return voucher ? voucher.amount : 0; }
-  function baseTotal() { return Math.max(0, subtotal - voucherAmount()); }
-  function pointsUsed() {
-    const cb = $('usePoints');
-    const member = memberInfo();
-    if (!cb || !cb.checked || !member) return 0;
-    return Math.min(member.points, Math.floor(baseTotal()));
-  }
-  function totals() {
-    const pts = pointsUsed();
-    const total = BB.round2(baseTotal() - pts + deliveryFee());
-    return { subtotal, discount: voucherAmount(), pointsUsed: pts, deliveryFee: deliveryFee(), total };
-  }
+  const deliveryFee = () => type() === 'delivery' ? D.delivery.fee : 0;
+  const totals = () => ({ subtotal, deliveryFee: deliveryFee(), total: BB.round2(subtotal + deliveryFee()) });
 
   function update() {
     const isDelivery = type() === 'delivery';
     $('deliveryFields').hidden = !isDelivery;
-    $('detailsHint').textContent = isDelivery ? 'Required for delivery' : 'Optional · earn points';
+    $('detailsHint').textContent = isDelivery ? 'Required for delivery' : 'Optional';
 
     const t = totals();
     $('items').innerHTML = BBC.lineRows(lines);
     $('sum').innerHTML = `
       <div><span>Subtotal</span><span>${BB.peso(t.subtotal, true)}</span></div>
-      ${t.discount ? `<div class="minus"><span>Voucher (${voucher.code})</span><span>−${BB.peso(t.discount, true)}</span></div>` : ''}
-      ${t.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(t.pointsUsed, true)}</span></div>` : ''}
-      ${isDelivery ? `<div><span>Delivery fee</span><span>${t.deliveryFee ? BB.peso(t.deliveryFee, true) : 'Free'}</span></div>` : ''}
+      ${isDelivery ? `<div><span>Delivery fee</span><span>${BB.peso(t.deliveryFee, true)}</span></div>` : ''}
       <div class="total"><span>Total</span><span>${BB.peso(t.total, true)}</span></div>
       <div class="fine"><span>Prices include 12% VAT. Senior citizen and PWD discounts are applied by the cashier.</span></div>`;
 
     const m = method();
-    const label = m === 'GCASH' ? `Pay ${BB.peso(t.total, true)} with GCash`
+    $('submit').textContent = m === 'GCASH' ? `Pay ${BB.peso(t.total, true)} with GCash`
       : m === 'MAYA' ? `Pay ${BB.peso(t.total, true)} with Maya`
       : `Place order · ${BB.peso(t.total, true)}`;
-    $('submit').textContent = label;
     $('submitHint').textContent = m === 'CASH'
       ? (isDelivery ? 'Pay the rider in cash when your order arrives.' : 'Your order is sent to the kitchen once the cashier receives your payment.')
       : 'Simulated payment: no real money is charged.';
@@ -1850,18 +1697,11 @@ BBViews['customer/checkout'] = function () {
   $('mobile').value = saved.mobile || '';
   $('address').value = saved.address || '';
   $('landmark').value = saved.landmark || '';
-  renderMember();
-  if (saved.voucher) applyVoucher(saved.voucher, true);
   update();
 
   $('types').addEventListener('change', () => { renderMethods(); update(); });
   $('methods').addEventListener('change', update);
-  $('mobile').addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/\D/g, '');
-    renderMember();
-    update();
-  });
-  $('memberBox').addEventListener('change', update);
+  $('mobile').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
 
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1887,11 +1727,7 @@ BBViews['customer/checkout'] = function () {
 
     const t = totals();
     const m = method();
-    BB.set('checkoutForm', {
-      type: type(), method: m, name, mobile,
-      address: $('address').value.trim(), landmark: $('landmark').value.trim(),
-      voucher: voucher ? voucher.code : '', usePoints: t.pointsUsed > 0
-    });
+    BB.set('checkoutForm', { type: type(), method: m, name, mobile, address: $('address').value.trim(), landmark: $('landmark').value.trim() });
 
     const draft = {
       type: type(),
@@ -1900,8 +1736,6 @@ BBViews['customer/checkout'] = function () {
       delivery: isDelivery ? { address: $('address').value.trim(), landmark: $('landmark').value.trim() } : null,
       items: lines,
       subtotal: t.subtotal,
-      voucher: voucher ? { code: voucher.code, amount: t.discount } : null,
-      pointsUsed: t.pointsUsed,
       deliveryFee: t.deliveryFee,
       total: t.total,
       method: m,
@@ -1910,7 +1744,6 @@ BBViews['customer/checkout'] = function () {
 
     if (m === 'CASH') {
       const order = BB.orders.create(Object.assign(draft, { status: 'awaiting_payment' }));
-      if (order.pointsUsed) BB.loyalty.add(mobile, name, -order.pointsUsed);
       BB.cart.clear();
       BB.set('checkoutForm', {});
       location.href = 'customer.html?view=success&order=' + order.id;
@@ -1952,7 +1785,6 @@ BBViews['customer/pay'] = function () {
     // Short pause so it feels like a wallet confirming; everything happens locally
     setTimeout(() => {
       const order = BB.orders.create(Object.assign({}, draft, { status: 'awaiting_payment' }));
-      if (order.pointsUsed) BB.loyalty.add(order.customer.mobile, order.customer.name, -order.pointsUsed);
       BB.payments.record(order, draft.method);
       BB.cart.clear();
       BB.set('draft', null);
@@ -1999,13 +1831,6 @@ BBViews['customer/success'] = function () {
       <span class="order-no">${order.orderNo}</span>`;
   }
 
-  // ---- Loyalty points ----
-  if (order.customer.mobile && !['cancelled', 'voided'].includes(order.status)) {
-    const member = BB.loyalty.member(order.customer.mobile);
-    const earned = paid ? order.pointsEarned : BB.loyalty.earnFor(order.total);
-    $('points').innerHTML = `<div class="points-box"><strong>+${earned}</strong><span>${paid ? 'points earned' : 'points to earn once paid'}. Balance: <b>${member ? member.points : 0} points</b>.</span></div>`;
-  }
-
   // ---- Receipt ----
   const vatable = BB.round2(order.total / 1.12);
   const vat = BB.round2(order.total - vatable);
@@ -2028,10 +1853,8 @@ BBViews['customer/success'] = function () {
     <div class="r-sep"></div>
     <div class="sum">
       <div><span>Subtotal</span><span>${BB.peso(order.subtotal, true)}</span></div>
-      ${order.voucher ? `<div class="minus"><span>Voucher (${order.voucher.code})</span><span>−${BB.peso(order.voucher.amount, true)}</span></div>` : ''}
       ${order.senior ? `<div class="minus"><span>${order.senior.type} discount</span><span>−${BB.peso(order.senior.amount, true)}</span></div>` : ''}
-      ${order.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(order.pointsUsed, true)}</span></div>` : ''}
-      ${order.type === 'delivery' ? `<div><span>Delivery fee</span><span>${order.deliveryFee ? BB.peso(order.deliveryFee, true) : 'Free'}</span></div>` : ''}
+      ${order.type === 'delivery' ? `<div><span>Delivery fee</span><span>${BB.peso(order.deliveryFee, true)}</span></div>` : ''}
       <div class="total"><span>Total</span><span>${BB.peso(order.total, true)}</span></div>
       <div class="fine"><span>VATable sales</span><span>${BB.peso(vatable, true)}</span></div>
       <div class="fine"><span>VAT (12%)</span><span>${BB.peso(vat, true)}</span></div>
@@ -2155,7 +1978,6 @@ BBViews['customer/track'] = function () {
       return;
     }
     const o = BB.orders.get(currentId);
-    if (o.pointsUsed) BB.loyalty.add(o.customer.mobile, o.customer.name, o.pointsUsed);
     BB.orders.update(o.id, { status: 'cancelled', cancelReason: 'Cancelled by customer' });
     BBC.toast('Order cancelled');
     render();
@@ -2188,7 +2010,6 @@ BBViews['cashier/pos'] = function () {
     lines: () => BB.get('posCart', []),
     save: (l) => BB.set('posCart', l)
   };
-  let voucher = null;
   let activeCat = 'all';
 
   // ---- Menu grid ----
@@ -2293,17 +2114,8 @@ BBViews['cashier/pos'] = function () {
         <button type="button" class="rm" data-act="rm">Remove</button>
       </div>`).join('') : '<p class="no-lines">Tap an item on the left to start an order.</p>';
 
-    const sub = subtotal();
-    if (voucher) {
-      const re = BB.checkVoucher(voucher.code, sub);
-      voucher = re.ok && !re.freeDelivery ? re : null;
-      if (!voucher) { $('vmsg').className = 'vmsg bad'; $('vmsg').textContent = re.message || 'Voucher removed.'; }
-    }
-    const disc = voucher ? voucher.amount : 0;
-    const total = BB.round2(sub - disc);
+    const total = subtotal();
     $('totals').innerHTML = `
-      <div><span>Subtotal</span><span>${BB.peso(sub, true)}</span></div>
-      ${disc ? `<div class="minus"><span>Voucher ${voucher.code}</span><span>−${BB.peso(disc, true)}</span></div>` : ''}
       <div class="big"><span>Total</span><span>${BB.peso(total, true)}</span></div>`;
     $('charge').disabled = !lines.length;
     $('charge').textContent = lines.length ? `Charge ${BB.peso(total, true)}` : 'Charge';
@@ -2321,41 +2133,22 @@ BBViews['cashier/pos'] = function () {
     renderTicket();
   });
 
-  $('applyV').addEventListener('click', () => {
-    const res = BB.checkVoucher($('voucher').value, subtotal());
-    if (res.ok && res.freeDelivery) { $('vmsg').className = 'vmsg bad'; $('vmsg').textContent = `${res.code} is for delivery orders only.`; return; }
-    voucher = res.ok ? res : null;
-    $('vmsg').className = 'vmsg ' + (res.ok ? 'ok' : 'bad');
-    $('vmsg').textContent = res.ok ? `${res.code} applied · ${res.label}` : res.message;
-    renderTicket();
-  });
-
-  $('custMobile').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
-
   $('clear').addEventListener('click', () => {
-    ticket.save([]); voucher = null;
-    $('voucher').value = ''; $('vmsg').textContent = ''; $('custName').value = ''; $('custMobile').value = '';
+    ticket.save([]);
+    $('custName').value = '';
     renderTicket();
   });
 
   $('charge').addEventListener('click', () => {
-    const mobile = $('custMobile').value.trim();
-    if (mobile && !/^09\d{9}$/.test(mobile)) {
-      $('vmsg').className = 'vmsg bad';
-      $('vmsg').textContent = 'Mobile number must be 11 digits and start with 09, or leave it blank.';
-      return;
-    }
     const lines = ticket.lines();
     const sub = subtotal();
     const order = {
       type: type(),
       table: type() === 'dine-in' ? Number($('table').value) : null,
-      customer: { name: $('custName').value.trim(), mobile },
+      customer: { name: $('custName').value.trim(), mobile: '' },
       delivery: null,
       items: lines,
       subtotal: sub,
-      voucher: voucher ? { code: voucher.code, amount: voucher.amount } : null,
-      pointsUsed: 0,
       deliveryFee: 0,
       method: null,
       status: 'awaiting_payment',
@@ -2461,7 +2254,7 @@ BBViews['cashier/orders'] = function () {
     const isVoid = pending.act === 'void';
     $('mTitle').textContent = `${isVoid ? 'Void' : 'Cancel'} ${o.orderNo}?`;
     $('mText').textContent = isVoid
-      ? `This order was already paid (${BB.peso(o.total, true)} by ${METHOD[o.method]}). Voiding marks the payment as voided, removes it from sales and reverses loyalty points. Return the money to the customer.`
+      ? `This order was already paid (${BB.peso(o.total, true)} by ${METHOD[o.method]}). Voiding marks the payment as voided and removes it from sales. Return the money to the customer.`
       : 'The order is removed from the queue. Nothing has been paid yet.';
     $('mOk').textContent = isVoid ? 'Void order' : 'Cancel order';
     $('modalBack').hidden = false;
@@ -2483,7 +2276,6 @@ BBViews['cashier/orders'] = function () {
       BB.payments.voidOrder(o, reason);
       BBC.toast(`${o.orderNo} voided`);
     } else {
-      if (o.pointsUsed) BB.loyalty.add(o.customer.mobile, o.customer.name, o.pointsUsed);
       BB.orders.update(o.id, { status: 'cancelled', cancelReason: reason });
       BB.audit.log('Cancelled order', `${o.orderNo} · ${reason}`);
       BBC.toast(`${o.orderNo} cancelled`);
@@ -2538,8 +2330,7 @@ BBViews['cashier/payment'] = function () {
 
   function draftOrder() {
     const sp = senior();
-    // Senior/PWD discount can't be combined with a voucher
-    return Object.assign({}, order, { senior: sp, voucher: sp ? null : order.voucher });
+    return Object.assign({}, order, { senior: sp });
   }
 
   function update() {
@@ -2549,14 +2340,11 @@ BBViews['cashier/payment'] = function () {
     const sp = d.senior;
     if (sp) {
       const share = BB.round2(order.subtotal * sp.eligible / sp.diners);
-      $('spNote').textContent = `Eligible share ${BB.peso(share, true)} ÷ 1.12 = ${BB.peso(share / 1.12, true)} (VAT-exempt), less 20% = ${BB.peso(share - sp.amount, true)}.` +
-        (order.voucher ? ` Voucher ${order.voucher.code} is removed because it can’t be combined with this discount.` : '');
+      $('spNote').textContent = `Eligible share ${BB.peso(share, true)} ÷ 1.12 = ${BB.peso(share / 1.12, true)} (VAT-exempt), less 20% = ${BB.peso(share - sp.amount, true)}.`;
     }
     $('sum').innerHTML = `
       <div><span>Subtotal</span><span>${BB.peso(d.subtotal, true)}</span></div>
-      ${d.voucher ? `<div class="minus"><span>Voucher ${d.voucher.code}</span><span>−${BB.peso(d.voucher.amount, true)}</span></div>` : ''}
       ${sp ? `<div class="minus"><span>${sp.type} discount (${sp.eligible}/${sp.diners})</span><span>−${BB.peso(sp.amount, true)}</span></div>` : ''}
-      ${d.pointsUsed ? `<div class="minus"><span>Points used</span><span>−${BB.peso(d.pointsUsed, true)}</span></div>` : ''}
       ${d.deliveryFee ? `<div><span>Delivery fee</span><span>${BB.peso(d.deliveryFee, true)}</span></div>` : ''}
       <div class="big"><span>Amount due</span><span>${BB.peso(total, true)}</span></div>`;
 
@@ -2597,7 +2385,7 @@ BBViews['cashier/payment'] = function () {
     if (!problem && m === 'CASH' && tendered < total) problem = `Amount received is short by ${BB.peso(total - tendered, true)}.`;
     if (problem) { err.textContent = problem; err.hidden = false; return; }
 
-    const updated = BB.orders.update(order.id, { senior: d.senior, voucher: d.voucher, total, cashier: user.name });
+    const updated = BB.orders.update(order.id, { senior: d.senior, total, cashier: user.name });
     if (d.senior) BB.audit.log('Applied discount', `${order.orderNo} · ${d.senior.type} ${d.senior.idNo} · −${BB.peso(d.senior.amount, true)}`);
     BB.payments.record(updated, m, m === 'CASH'
       ? { tendered: BB.round2(tendered), changeDue: BB.round2(tendered - total), receivedBy: user.name }
@@ -2666,10 +2454,8 @@ BBViews['cashier/receipt'] = function () {
     ${lines}
     <hr>
     <div class="row"><span>Subtotal</span><span>${p2(o.subtotal)}</span></div>
-    ${o.voucher ? `<div class="row"><span>Voucher ${o.voucher.code}</span><span>−${p2(o.voucher.amount)}</span></div>` : ''}
     ${o.senior ? `<div class="row"><span>${o.senior.type} disc. 20% (${o.senior.eligible}/${o.senior.diners})</span><span>−${p2(o.senior.amount)}</span></div>
       <div class="opt">ID ${esc(o.senior.idNo)} · ${esc(o.senior.name)}</div>` : ''}
-    ${o.pointsUsed ? `<div class="row"><span>Points redeemed</span><span>−${p2(o.pointsUsed)}</span></div>` : ''}
     ${o.deliveryFee ? `<div class="row"><span>Delivery fee</span><span>${p2(o.deliveryFee)}</span></div>` : ''}
     <div class="row big"><span>TOTAL</span><span>${p2(o.total)}</span></div>
     <hr>
@@ -2680,7 +2466,6 @@ BBViews['cashier/receipt'] = function () {
       <div class="row"><span>Status</span><span>${pay.status}</span></div>` : '<div class="row"><span>Payment</span><span>UNPAID</span></div>'}
     <hr>
     ${vatRows}
-    ${o.pointsEarned ? `<hr><div class="row"><span>Points earned</span><span>+${o.pointsEarned}</span></div>` : ''}
     <hr>
     <div class="c">Thank you, see you again!</div>`;
 
@@ -3606,7 +3391,7 @@ BBViews['admin/dashboard'] = function () {
       <div class="kpi"><small>Sales today</small><strong>${BB.peso(salesT, true)}</strong>${delta(salesT, salesLW)}</div>
       <div class="kpi"><small>Paid orders today</small><strong>${today.length}</strong>${delta(today.length, lastWeek.length)}</div>
       <div class="kpi"><small>Average order</small><strong>${BB.peso(today.length ? salesT / today.length : 0, true)}</strong><span class="hint">Same time last week ${BB.peso(lastWeek.length ? salesLW / lastWeek.length : 0, true)}</span></div>
-      <div class="kpi"><small>Discounts given today</small><strong>${BB.peso(discT, true)}</strong><span class="hint">Vouchers, senior/PWD, points</span></div>`;
+      <div class="kpi"><small>Senior/PWD discounts today</small><strong>${BB.peso(discT, true)}</strong><span class="hint">20% off the eligible share</span></div>`;
 
     // 14-day sales
     const days = [];
@@ -3670,184 +3455,6 @@ BBViews['admin/dashboard'] = function () {
   render();
   BBS.onOrdersChange(render);
   window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(render, 200); });
-})();
-};
-
-/* ===== admin/reports ===== */
-BBViews['admin/reports'] = function () {
-(function () {
-  const user = BBS.init(['admin'], 'reports');
-  if (!user) return;
-  const D = BB_DATA, I = BB.inventory;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-  const p2 = (n) => BB.peso(n, true);
-  const sum = (list, f) => list.reduce((n, x) => n + f(x), 0);
-  const NAMES = { GCASH: 'GCash', CASH: 'Cash', MAYA: 'Maya' };
-  const COLORS = { GCASH: 'var(--pay-gcash)', CASH: 'var(--pay-cash)', MAYA: 'var(--pay-maya)' };
-  const TABS = [['sales', 'Sales summary'], ['items', 'Best sellers'], ['usage', 'Ingredient usage'], ['waste', 'Wastage'], ['payments', 'Payment records']];
-  let tab = (location.hash || '#sales').slice(1);
-  let csv = []; // rows for the export button
-
-  const startOf = (d) => { d = new Date(d); d.setHours(0, 0, 0, 0); return d; };
-  const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
-  const isoDay = (d) => d.toISOString().slice(0, 10);
-  const fmtDay = (d) => d.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' });
-
-  // Default custom range = last 7 days
-  $('to').value = isoDay(new Date());
-  $('from').value = isoDay(addDays(new Date(), -6));
-
-  function period() {
-    const today = startOf(new Date());
-    const v = $('range').value;
-    if (v === 'today') return [today, addDays(today, 1)];
-    if (v === 'yesterday') return [addDays(today, -1), today];
-    if (v === '7') return [addDays(today, -6), addDays(today, 1)];
-    if (v === '30') return [addDays(today, -29), addDays(today, 1)];
-    if (v === 'month') return [new Date(today.getFullYear(), today.getMonth(), 1), addDays(today, 1)];
-    const f = startOf(new Date($('from').value + 'T00:00')), t = addDays(startOf(new Date($('to').value + 'T00:00')), 1);
-    return f < t ? [f, t] : [t, f];
-  }
-
-  function table(head, rows, foot, alignRight) {
-    const r = (i) => alignRight && alignRight.includes(i) ? ' class="r num"' : '';
-    return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${head.map((h, i) => `<th${r(i)}>${h}</th>`).join('')}</tr></thead>
-      <tbody>${rows.length ? rows.map(row => `<tr>${row.map((c, i) => `<td${r(i)}>${c}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${head.length}" class="empty-row">No data in this period.</td></tr>`}</tbody>
-      ${foot ? `<tfoot><tr>${foot.map((c, i) => `<td${r(i)}>${c}</td>`).join('')}</tr></tfoot>` : ''}</table></div>`;
-  }
-
-  function render() {
-    $('fromWrap').hidden = $('toWrap').hidden = $('range').value !== 'custom';
-    $('tabs').innerHTML = TABS.map(([id, l]) => `<button type="button" data-tab="${id}" class="${id === tab ? 'on' : ''}">${l}</button>`).join('');
-    const [from, to] = period();
-    $('rangeText').textContent = `${fmtDay(from)} – ${fmtDay(addDays(to, -1))}`;
-    const withSample = $('sample').checked;
-    const sales = BB.history.sales(from, to, withSample);
-    ({ sales: renderSales, items: renderItems, usage: renderUsage, waste: renderWaste, payments: renderPayments })[tab](sales, from, to, withSample);
-  }
-
-  // ---- Sales summary ----
-  function renderSales(sales, from, to) {
-    const gross = sum(sales, o => o.subtotal + o.deliveryFee), disc = sum(sales, o => o.discount), net = sum(sales, o => o.total);
-    const vatable = net / 1.12;
-    let html = `<div class="kpis">
-      <div class="kpi"><small>Gross sales</small><strong>${p2(gross)}</strong></div>
-      <div class="kpi"><small>Discounts</small><strong>−${p2(disc)}</strong></div>
-      <div class="kpi"><small>Net sales</small><strong>${p2(net)}</strong><span class="hint">VAT included: ${p2(net - vatable)}</span></div>
-      <div class="kpi"><small>Orders · average</small><strong>${sales.length}</strong><span class="hint">${p2(sales.length ? net / sales.length : 0)} per order</span></div></div>`;
-
-    // Daily rows
-    const days = [];
-    for (let d = new Date(from); d < to; d = addDays(d, 1)) {
-      const list = sales.filter(o => new Date(o.paidAt) >= d && new Date(o.paidAt) < addDays(d, 1));
-      days.push({ d: new Date(d), list });
-    }
-    html += `<section class="panel panel-pad"><h2>Net sales per day</h2><div id="dayChart"></div></section>`;
-    html += `<div class="two">
-      <section class="panel panel-pad"><h2>By payment method</h2><div id="mix"></div></section>
-      <section class="panel panel-pad"><h2>By order type and discounts</h2>${table(['', 'Orders', 'Net sales'],
-        [['Dine-in', 'dine-in'], ['Take-out', 'take-out'], ['Delivery', 'delivery']].map(([l, t]) => { const x = sales.filter(o => o.type === t); return [l, x.length, p2(sum(x, o => o.total))]; })
-          .concat(['Senior/PWD', 'Voucher', 'Points'].map(k => { const x = sales.filter(o => o.discountType === k); return [`${k} discount`, x.length, '−' + p2(sum(x, o => o.discount))]; })), null, [1, 2])}</section></div>`;
-    const rows = days.map(({ d, list }) => [fmtDay(d), list.length, p2(sum(list, o => o.subtotal + o.deliveryFee)), '−' + p2(sum(list, o => o.discount)), p2(sum(list, o => o.total)),
-      ...['GCASH', 'CASH', 'MAYA'].map(m => p2(sum(list.filter(o => o.method === m), o => o.total)))]);
-    html += `<section class="panel"><div class="panel-head"><h2>Daily breakdown</h2></div>${table(['Date', 'Orders', 'Gross', 'Discounts', 'Net', 'GCash', 'Cash', 'Maya'], rows.slice().reverse(),
-      ['Total', sales.length, p2(gross), '−' + p2(disc), p2(net), ...['GCASH', 'CASH', 'MAYA'].map(m => p2(sum(sales.filter(o => o.method === m), o => o.total)))], [1, 2, 3, 4, 5, 6, 7])}</section>`;
-    $('out').innerHTML = html;
-
-    BBChart.bars($('dayChart'), days.map(({ d, list }) => ({ label: d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }), value: sum(list, o => o.total), tip: `<b>${fmtDay(d)}</b><span>${p2(sum(list, o => o.total))} · ${list.length} orders</span>` })),
-      { format: (v, axis) => axis ? '₱' + (v >= 1000 ? Math.round(v / 1000) + 'k' : v) : p2(v), axisLabel: 'Net sales per day' });
-    BBChart.share($('mix'), ['GCASH', 'CASH', 'MAYA'].map(m => ({ label: NAMES[m], color: COLORS[m], value: sum(sales.filter(o => o.method === m), o => o.total) })), p2);
-    csv = [['Date', 'Orders', 'Gross', 'Discounts', 'Net', 'GCash', 'Cash', 'Maya']].concat(days.map(({ d, list }) => [isoDay(d), list.length, sum(list, o => o.subtotal + o.deliveryFee).toFixed(2), sum(list, o => o.discount).toFixed(2), sum(list, o => o.total).toFixed(2),
-      ...['GCASH', 'CASH', 'MAYA'].map(m => sum(list.filter(o => o.method === m), o => o.total).toFixed(2))]));
-  }
-
-  // ---- Best sellers ----
-  function renderItems(sales) {
-    const map = {};
-    sales.forEach(o => o.items.forEach(l => {
-      const it = D.items.find(i => i.id === l.itemId);
-      const m = map[l.itemId] = map[l.itemId] || { name: l.name, cat: it ? (D.categories.find(c => c.id === it.cat) || { name: '—' }).name : 'Removed item', qty: 0, rev: 0 };
-      m.qty += l.qty; m.rev += l.unitPrice * l.qty;
-    }));
-    const list = Object.values(map).sort((a, b) => b.qty - a.qty);
-    const totalRev = sum(list, x => x.rev) || 1, maxQ = list.length ? list[0].qty : 1;
-    const cats = {};
-    list.forEach(x => { cats[x.cat] = cats[x.cat] || { qty: 0, rev: 0 }; cats[x.cat].qty += x.qty; cats[x.cat].rev += x.rev; });
-    $('out').innerHTML = `<div class="two">
-      <section class="panel"><div class="panel-head"><h2>Items</h2><span class="hint">Ranked by quantity sold</span></div>
-        ${table(['#', 'Item', 'Category', 'Sold', '', 'Revenue', 'Share'], list.map((x, i) => [i + 1, `<b>${esc(x.name)}</b>`, esc(x.cat), x.qty, `<div class="inline-meter"><i style="width:${x.qty / maxQ * 100}%"></i></div>`, p2(x.rev), `<span class="pct">${(x.rev / totalRev * 100).toFixed(1)}%</span>`]), null, [3, 5, 6])}</section>
-      <section class="panel"><div class="panel-head"><h2>Categories</h2></div>
-        ${table(['Category', 'Sold', 'Revenue', 'Share'], Object.keys(cats).sort((a, b) => cats[b].rev - cats[a].rev).map(c => [esc(c), cats[c].qty, p2(cats[c].rev), `<span class="pct">${(cats[c].rev / totalRev * 100).toFixed(1)}%</span>`]), ['Total', sum(list, x => x.qty), p2(totalRev), '100%'], [1, 2, 3])}</section></div>`;
-    csv = [['Rank', 'Item', 'Category', 'Qty sold', 'Revenue']].concat(list.map((x, i) => [i + 1, x.name, x.cat, x.qty, x.rev.toFixed(2)]));
-  }
-
-  // ---- Ingredient usage (from recipes of what was sold) ----
-  function renderUsage(sales) {
-    const use = {};
-    sales.forEach(o => o.items.forEach(l => { const u = I.usageForLine(l); for (const k in u) use[k] = (use[k] || 0) + u[k]; }));
-    const rows = Object.keys(use).map(id => { const g = I.ing(id) || { name: id, unit: '', cost: 0, cat: '' }; return { g, qty: use[id], cost: use[id] * g.cost }; }).sort((a, b) => b.cost - a.cost);
-    const totalCost = sum(rows, r => r.cost), net = sum(sales, o => o.total);
-    $('out').innerHTML = `<div class="kpis">
-        <div class="kpi"><small>Ingredient cost of sales</small><strong>${p2(totalCost)}</strong></div>
-        <div class="kpi"><small>Net sales</small><strong>${p2(net)}</strong></div>
-        <div class="kpi${net && totalCost / net > 0.35 ? ' warn' : ''}"><small>Food cost %</small><strong>${net ? (totalCost / net * 100).toFixed(1) : 0}%</strong><span class="hint">Target: 30–35%</span></div>
-        <div class="kpi"><small>Ingredients used</small><strong>${rows.length}</strong></div></div>
-      <section class="panel"><div class="panel-head"><h2>Usage by ingredient</h2><span class="hint">Calculated from each item’s recipe, sizes and add-ons</span></div>
-        ${table(['Ingredient', 'Category', 'Used', 'Cost', 'Share of cost'], rows.map(r => [`<b>${esc(r.g.name)}</b>`, esc(r.g.cat), I.fmt(r.qty, r.g.unit), p2(r.cost), `<span class="pct">${(r.cost / (totalCost || 1) * 100).toFixed(1)}%</span>`]), ['Total', '', '', p2(totalCost), '100%'], [2, 3, 4])}</section>`;
-    csv = [['Ingredient', 'Category', 'Quantity used', 'Unit', 'Cost']].concat(rows.map(r => [r.g.name, r.g.cat, r.qty.toFixed(2), r.g.unit, r.cost.toFixed(2)]));
-  }
-
-  // ---- Wastage ----
-  function renderWaste(sales, from, to, withSample) {
-    const real = I.movements().filter(m => m.type === 'WASTAGE');
-    const all = (withSample ? BB.history.sampleWastage() : []).concat(real).filter(m => { const t = new Date(m.at); return t >= from && t < to; });
-    const total = sum(all, m => m.cost);
-    const byReason = {};
-    all.forEach(m => { const r = (m.note || 'Other').split(' · ')[0]; byReason[r] = (byReason[r] || 0) + m.cost; });
-    const byIng = {};
-    all.forEach(m => { byIng[m.ing] = byIng[m.ing] || { qty: 0, cost: 0 }; byIng[m.ing].qty += -m.qty; byIng[m.ing].cost += m.cost; });
-    const net = sum(sales, o => o.total);
-    $('out').innerHTML = `<div class="kpis">
-        <div class="kpi${total ? ' warn' : ''}"><small>Wastage cost</small><strong>${p2(total)}</strong></div>
-        <div class="kpi"><small>Entries</small><strong>${all.length}</strong></div>
-        <div class="kpi"><small>Wastage as % of sales</small><strong>${net ? (total / net * 100).toFixed(2) : 0}%</strong></div>
-        <div class="kpi"><small>Top reason</small><strong style="font-size:1rem">${esc(Object.keys(byReason).sort((a, b) => byReason[b] - byReason[a])[0] || '—')}</strong></div></div>
-      <div class="two">
-        <section class="panel"><div class="panel-head"><h2>By ingredient</h2></div>${table(['Ingredient', 'Wasted', 'Cost'], Object.keys(byIng).sort((a, b) => byIng[b].cost - byIng[a].cost).map(id => { const g = I.ing(id) || { name: id, unit: '' }; return [esc(g.name), I.fmt(byIng[id].qty, g.unit), p2(byIng[id].cost)]; }), null, [1, 2])}</section>
-        <section class="panel"><div class="panel-head"><h2>By reason</h2></div>${table(['Reason', 'Cost'], Object.keys(byReason).sort((a, b) => byReason[b] - byReason[a]).map(r => [esc(r), p2(byReason[r])]), ['Total', p2(total)], [1])}</section></div>
-      <section class="panel"><div class="panel-head"><h2>Entries</h2></div>${table(['When', 'Ingredient', 'Qty', 'Cost', 'Reason', 'By'], all.slice().sort((a, b) => b.at.localeCompare(a.at)).map(m => { const g = I.ing(m.ing) || { name: m.ing, unit: '' }; return [BB.dateTime(m.at), esc(g.name), I.fmt(-m.qty, g.unit), p2(m.cost), esc(m.note), esc(m.user)]; }), null, [2, 3])}</section>`;
-    csv = [['Date', 'Ingredient', 'Quantity', 'Unit', 'Cost', 'Reason', 'By']].concat(all.map(m => { const g = I.ing(m.ing) || { name: m.ing, unit: '' }; return [m.at, g.name, (-m.qty), g.unit, m.cost.toFixed(2), m.note, m.user]; }));
-  }
-
-  // ---- Payment records (real only) ----
-  function renderPayments(sales, from, to) {
-    const list = BB.payments.list().filter(p => { const t = new Date(p.paidAt); return t >= from && t < to; }).reverse();
-    const paid = list.filter(p => p.status === 'PAID');
-    $('out').innerHTML = `<p class="sample-note">Payment records are the real ones saved by this demo (sample history has no reference numbers).</p>
-      <div class="kpis">${['GCASH', 'CASH', 'MAYA'].map(m => `<div class="kpi"><small>${NAMES[m]}</small><strong>${p2(sum(paid.filter(p => p.method === m), p => p.amount))}</strong><span class="hint">${paid.filter(p => p.method === m).length} payment(s)</span></div>`).join('')}
-        <div class="kpi${list.length - paid.length ? ' alert' : ''}"><small>Voided</small><strong>${list.length - paid.length}</strong></div></div>
-      <section class="panel">${table(['Reference no.', 'Order', 'Method', 'Amount', 'Status', 'Paid at', 'Received by'],
-        list.map(p => [`<span class="mono">${p.referenceNo}</span>`, `<span class="mono">${p.orderNo}</span>`, NAMES[p.method], p2(p.amount), `<span class="chip ${p.status === 'PAID' ? 'chip-green' : 'chip-red'}">${p.status}</span>`, BB.dateTime(p.paidAt), esc(p.receivedBy || 'Self-service (QR)')]),
-        ['Total paid', '', '', p2(sum(paid, p => p.amount)), '', '', ''], [3])}</section>`;
-    csv = [['Reference', 'Order', 'Method', 'Amount', 'Status', 'Paid at', 'Received by']].concat(list.map(p => [p.referenceNo, p.orderNo, p.method, p.amount.toFixed(2), p.status, p.paidAt, p.receivedBy || 'Self-service (QR)']));
-  }
-
-  // ---- Events ----
-  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; history.replaceState(null, '', '#' + tab); render(); } });
-  ['range', 'from', 'to', 'sample'].forEach(id => $(id).addEventListener('change', render));
-  $('exportBtn').addEventListener('click', () => {
-    const text = csv.map(r => r.map(c => { const s = String(c == null ? '' : c); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv' }));
-    const [from, to] = period();
-    a.download = `brew-bite-${tab}-${isoDay(from)}-to-${isoDay(addDays(to, -1))}.csv`;
-    document.body.appendChild(a); a.click(); a.remove();
-    BB.audit.log('Exported report', `${TABS.find(t => t[0] === tab)[1]} · ${$('rangeText').textContent}`);
-  });
-  window.addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(render, 200); });
-  if (!TABS.some(t => t[0] === tab)) tab = 'sales';
-  render();
 })();
 };
 
@@ -4168,221 +3775,6 @@ BBViews['admin/recipes'] = function () {
 })();
 };
 
-/* ===== admin/promos ===== */
-BBViews['admin/promos'] = function () {
-(function () {
-  const user = BBS.init(['admin'], 'promos');
-  if (!user) return;
-  const D = BB_DATA;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-
-  const describe = (v) => v.kind === 'percent' ? `${v.value}% off${v.max ? ` (max ${BB.peso(v.max)})` : ''}` : v.kind === 'fixed' ? `${BB.peso(v.value)} off` : 'Free delivery';
-
-  function render() {
-    const used = BB.orders.list().filter(o => o.voucher && o.paidAt && o.status !== 'voided');
-    $('rows').innerHTML = D.vouchers.map(v => {
-      const u = used.filter(o => o.voucher.code === v.code);
-      return `<tr>
-        <td><b class="mono">${esc(v.code)}</b><small>${esc(v.label)}</small></td>
-        <td>${describe(v)}</td>
-        <td class="r num">${v.minSpend ? BB.peso(v.minSpend) : 'None'}</td>
-        <td class="r num">${u.length}</td>
-        <td class="r num">${BB.peso(u.reduce((n, o) => n + o.voucher.amount, 0), true)}</td>
-        <td><label class="switch"><input type="checkbox" data-toggle="${esc(v.code)}" ${v.active ? 'checked' : ''} aria-label="${esc(v.code)} active"><span></span></label></td>
-        <td class="r"><button class="btn btn-ghost btn-sm" data-edit="${esc(v.code)}">Edit</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="7" class="empty-row">No vouchers yet.</td></tr>';
-
-    const cur = D.promo.code;
-    $('bCode').innerHTML = D.vouchers.filter(v => v.active).map(v => `<option ${v.code === cur ? 'selected' : ''}>${esc(v.code)}</option>`).join('');
-  }
-
-  function preview() { $('bPreview').innerHTML = `<span>${esc($('bText').value || '…')}. Use code at checkout.</span><code>${esc($('bCode').value || '—')}</code>`; }
-  $('bText').value = D.promo.text;
-  $('bannerForm').addEventListener('input', preview);
-  $('bannerForm').addEventListener('change', preview);
-  $('bannerForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!$('bText').value.trim() || !$('bCode').value) { BBC.toast('Enter banner text and pick an active voucher.'); return; }
-    BB.admin.save('promo', Object.assign({}, D.promo, { text: $('bText').value.trim(), code: $('bCode').value }));
-    BB.audit.log('Updated promo banner', `${$('bText').value.trim()} · ${$('bCode').value}`);
-    BBC.toast('Banner saved');
-  });
-
-  $('rows').addEventListener('change', (e) => {
-    const t = e.target.closest('[data-toggle]'); if (!t) return;
-    const list = D.vouchers.map(v => v.code === t.dataset.toggle ? Object.assign({}, v, { active: t.checked }) : v);
-    BB.admin.save('vouchers', list);
-    BB.audit.log(t.checked ? 'Activated voucher' : 'Deactivated voucher', t.dataset.toggle);
-    render(); preview();
-  });
-
-  // ---- Editor ----
-  let editing = null;
-  function syncKind() {
-    const k = $('vKind').value;
-    $('vValueWrap').hidden = k === 'delivery';
-    $('vMaxWrap').hidden = k !== 'percent';
-    $('vValueLbl').textContent = k === 'percent' ? 'Percent off' : 'Amount off ₱';
-  }
-  $('vKind').addEventListener('change', syncKind);
-  function openV(code) {
-    editing = code ? D.vouchers.find(v => v.code === code) : null;
-    $('vTitle').textContent = editing ? 'Edit ' + editing.code : 'New voucher';
-    $('vCode').value = editing ? editing.code : '';
-    $('vCode').disabled = !!editing;
-    $('vKind').value = editing ? editing.kind : 'percent';
-    $('vValue').value = editing ? editing.value : '';
-    $('vMax').value = editing && editing.max ? editing.max : '';
-    $('vMin').value = editing ? editing.minSpend : 0;
-    $('vLabel').value = editing ? editing.label : '';
-    $('vDelete').hidden = !editing;
-    $('vDelete').dataset.confirm = ''; $('vDelete').textContent = 'Delete';
-    $('vErr').hidden = true;
-    syncKind();
-    $('vBack').hidden = false;
-    (editing ? $('vValue') : $('vCode')).focus();
-  }
-  $('addBtn').addEventListener('click', () => openV(null));
-  $('rows').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openV(b.dataset.edit); });
-
-  $('vForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const code = $('vCode').value.trim().toUpperCase().replace(/\s+/g, '');
-    const kind = $('vKind').value;
-    const value = kind === 'delivery' ? 0 : parseFloat($('vValue').value);
-    const max = kind === 'percent' && $('vMax').value ? parseFloat($('vMax').value) : undefined;
-    const minSpend = parseFloat($('vMin').value) || 0;
-    let err = '';
-    if (!/^[A-Z0-9]{4,16}$/.test(code)) err = 'Use 4 to 16 letters or numbers for the code, no spaces.';
-    else if (!editing && D.vouchers.some(v => v.code === code)) err = `${code} already exists.`;
-    else if (kind !== 'delivery' && !(value > 0)) err = 'Enter the discount amount.';
-    else if (kind === 'percent' && value > 50) err = 'Percent vouchers are capped at 50% off.';
-    if (err) { $('vErr').textContent = err; $('vErr').hidden = false; return; }
-    const rec = { code, kind, value, max, minSpend, active: editing ? editing.active : true };
-    rec.label = $('vLabel').value.trim() || describe(rec);
-    const list = editing ? D.vouchers.map(v => v.code === code ? rec : v) : D.vouchers.concat(rec);
-    BB.admin.save('vouchers', list);
-    BB.audit.log(editing ? 'Edited voucher' : 'Created voucher', `${code} · ${describe(rec)}${minSpend ? ' · min ' + BB.peso(minSpend) : ''}`);
-    $('vBack').hidden = true;
-    BBC.toast('Saved ' + code);
-    render(); preview();
-  });
-
-  $('vDelete').addEventListener('click', () => {
-    const b = $('vDelete');
-    if (D.promo.code === editing.code) { $('vErr').textContent = 'This code is on the promo banner. Pick a different banner code first.'; $('vErr').hidden = false; return; }
-    if (b.dataset.confirm !== 'yes') { b.dataset.confirm = 'yes'; b.textContent = 'Click again to delete'; return; }
-    BB.admin.save('vouchers', D.vouchers.filter(v => v.code !== editing.code));
-    BB.audit.log('Deleted voucher', editing.code);
-    $('vBack').hidden = true;
-    render(); preview();
-  });
-
-  document.querySelectorAll('.modal-back').forEach(back => {
-    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
-  });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
-  render(); preview();
-})();
-};
-
-/* ===== admin/loyalty ===== */
-BBViews['admin/loyalty'] = function () {
-(function () {
-  const user = BBS.init(['admin'], 'loyalty');
-  if (!user) return;
-  const D = BB_DATA;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-
-  function members() {
-    const mobiles = new Set(Object.keys(D.loyalty.members || {}).concat(Object.keys(BB.get('loyalty', {}))));
-    const orders = BB.orders.list().filter(o => o.customer && o.customer.mobile);
-    orders.forEach(o => mobiles.add(o.customer.mobile));
-    return [...mobiles].map(m => {
-      const rec = BB.loyalty.member(m) || { name: '', points: 0 };
-      const mine = orders.filter(o => o.customer.mobile === m && o.paidAt && o.status !== 'voided');
-      const last = mine.map(o => o.paidAt).sort().pop();
-      return { mobile: m, name: rec.name || (mine[0] && mine[0].customer.name) || '', points: rec.points, orders: mine.length, spent: mine.reduce((n, o) => n + o.total, 0), last };
-    }).sort((a, b) => b.points - a.points);
-  }
-
-  function render() {
-    const list = members();
-    const real = BB.orders.list().filter(o => o.paidAt && o.status !== 'voided');
-    const earned = real.reduce((n, o) => n + (o.pointsEarned || 0), 0);
-    const redeemed = real.reduce((n, o) => n + (o.pointsUsed || 0), 0);
-    const outstanding = list.reduce((n, m) => n + Math.max(0, m.points), 0);
-    $('kpis').innerHTML = `
-      <div class="kpi"><small>Members</small><strong>${list.length}</strong></div>
-      <div class="kpi"><small>Points outstanding</small><strong>${outstanding}</strong><span class="hint">Worth ${BB.peso(outstanding)} in discounts</span></div>
-      <div class="kpi"><small>Points earned (demo orders)</small><strong>${earned}</strong></div>
-      <div class="kpi"><small>Points redeemed (demo orders)</small><strong>${redeemed}</strong></div>`;
-
-    $('sPeso').value = D.loyalty.pesoPerPoint;
-    $('sMin').value = D.loyalty.minRedeem;
-    rule();
-
-    const q = $('search').value.trim().toLowerCase();
-    const rows = list.filter(m => !q || m.mobile.includes(q) || m.name.toLowerCase().includes(q));
-    $('rows').innerHTML = rows.map(m => `<tr>
-      <td><b>${esc(m.name || 'No name given')}</b></td>
-      <td class="mono" style="font-size:.84rem">${m.mobile.slice(0, 4)} ${m.mobile.slice(4, 7)} ${m.mobile.slice(7)}</td>
-      <td class="r num"><b>${m.points}</b></td>
-      <td class="r num">${BB.peso(Math.max(0, m.points))}</td>
-      <td class="r num">${m.orders}</td>
-      <td class="r num">${BB.peso(m.spent, true)}</td>
-      <td>${m.last ? BB.dateTime(m.last) : '<span class="muted">Sample member</span>'}</td>
-      <td class="r"><button class="btn btn-ghost btn-sm" data-adj="${m.mobile}">Adjust</button></td>
-    </tr>`).join('') || '<tr><td colspan="8" class="empty-row">No members match.</td></tr>';
-  }
-
-  function rule() {
-    const peso = parseInt($('sPeso').value, 10) || D.loyalty.pesoPerPoint, min = parseInt($('sMin').value, 10) || D.loyalty.minRedeem;
-    $('rule').innerHTML = `A ₱500 order earns <b>${Math.floor(500 / peso)} points</b>. Each point is ₱1 off. Customers can use points once they have <b>${min}</b>. That gives back about <b>${(100 / peso).toFixed(1)}%</b> of what they spend.`;
-  }
-  $('setForm').addEventListener('input', rule);
-  $('setForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const peso = parseInt($('sPeso').value, 10), min = parseInt($('sMin').value, 10);
-    if (!(peso >= 1) || !(min >= 1)) { BBC.toast('Enter whole numbers of 1 or more.'); return; }
-    BB.admin.save('loyaltyConfig', { pesoPerPoint: peso, minRedeem: min });
-    BB.audit.log('Changed loyalty settings', `1 point per ₱${peso} · redeem from ${min} points`);
-    BBC.toast('Loyalty settings saved');
-    render();
-  });
-  $('search').addEventListener('input', render);
-
-  let adjusting = null;
-  $('rows').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-adj]'); if (!b) return;
-    adjusting = members().find(m => m.mobile === b.dataset.adj);
-    $('aInfo').textContent = `${adjusting.name || adjusting.mobile} has ${adjusting.points} points.`;
-    $('aPts').value = ''; $('aErr').hidden = true;
-    $('aBack').hidden = false; $('aPts').focus();
-  });
-  $('aForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const pts = parseInt($('aPts').value, 10);
-    if (!pts) { $('aErr').textContent = 'Enter a number of points other than zero.'; $('aErr').hidden = false; return; }
-    if (adjusting.points + pts < 0) { $('aErr').textContent = `They only have ${adjusting.points} points.`; $('aErr').hidden = false; return; }
-    BB.loyalty.add(adjusting.mobile, adjusting.name, pts);
-    BB.audit.log('Adjusted loyalty points', `${adjusting.name || adjusting.mobile} · ${pts > 0 ? '+' : ''}${pts} · ${$('aReason').value}`);
-    $('aBack').hidden = true;
-    BBC.toast('Points updated');
-    render();
-  });
-
-  document.querySelectorAll('.modal-back').forEach(back => {
-    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
-  });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
-  render();
-})();
-};
-
 /* ===== admin/users ===== */
 BBViews['admin/users'] = function () {
 (function () {
@@ -4414,8 +3806,8 @@ BBViews['admin/users'] = function () {
       ['Senior/PWD discounts, cancel and void orders', 1, 1, 0, 0],
       ['Kitchen display, mark items sold out', 1, 0, 1, 0],
       ['Ingredients, suppliers, purchase orders, wastage', 1, 0, 0, 1],
-      ['Dashboard and reports', 1, 0, 0, 0],
-      ['Menu, prices, recipes, promos, loyalty', 1, 0, 0, 0],
+      ['Sales dashboard', 1, 0, 0, 0],
+      ['Menu, prices and recipes', 1, 0, 0, 0],
       ['Users and audit logs', 1, 0, 0, 0]
     ];
     const count = (r) => D.users.filter(u => u.role === r && u.active !== false).length;
@@ -4493,8 +3885,8 @@ BBViews['admin/audit'] = function () {
   // Group actions into areas so the owner can filter, e.g. everything about money
   function area(action) {
     const a = action.toLowerCase();
-    if (/void|cancel|discount|adjusted loyalty/.test(a)) return ['Needs review', 'risk'];
-    if (/payment|counter order|exported/.test(a)) return ['Sales', 'money'];
+    if (/void|cancel|discount/.test(a)) return ['Needs review', 'risk'];
+    if (/payment|counter order/.test(a)) return ['Sales', 'money'];
     if (/stock|wastage|purchase|ingredient|supplier/.test(a)) return ['Inventory', 'stock'];
     if (/preparing|ready|completed|recalled|sold out|available/.test(a)) return ['Kitchen', ''];
     if (/logged/.test(a)) return ['Login', ''];

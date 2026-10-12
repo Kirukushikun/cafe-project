@@ -45,7 +45,6 @@
 
   <nav class="cat-bar" id="catBar" aria-label="Menu categories"></nav>
 
-  <div class="promo" id="promo"></div>
 
   <main id="menu"></main>
   <p class="empty-search" id="noResults" hidden>No items match your search.</p>
@@ -111,7 +110,7 @@
     <div class="card">
       <div class="sum">
         <div><span>Subtotal</span><span id="subtotal"></span></div>
-        <div class="fine"><span>Vouchers, points and delivery fees are applied at checkout.</span></div>
+        <div class="fine"><span>A delivery fee is added at checkout for delivery orders.</span></div>
       </div>
     </div>
   </div>
@@ -137,29 +136,18 @@
       <div class="choices" id="types"></div>
     </section>
 
-    <!-- Customer details: optional for loyalty, required for delivery -->
+    <!-- Customer details: optional, required for delivery -->
     <section class="card">
-      <div class="card-head"><h2>Your details</h2><small class="muted" id="detailsHint">Optional · earn points</small></div>
+      <div class="card-head"><h2>Your details</h2><small class="muted" id="detailsHint">Optional</small></div>
       <div class="row-2">
         <div class="field"><label for="name">Name</label><input id="name" autocomplete="name" placeholder="Juan Dela Cruz"></div>
         <div class="field"><label for="mobile">Mobile number</label><input id="mobile" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="09XXXXXXXXX"></div>
       </div>
-      <div id="memberBox"></div>
       <div id="deliveryFields" hidden>
         <div class="field"><label for="address">Delivery address</label><textarea id="address" rows="2" placeholder="House no., street, barangay"></textarea><small id="deliveryArea"></small></div>
         <div class="field" style="margin-top:10px"><label for="landmark">Landmark <span class="muted" style="font-weight:400">(optional)</span></label><input id="landmark" placeholder="e.g. beside the barangay hall"></div>
       </div>
       <p class="msg bad" id="detailsErr" hidden></p>
-    </section>
-
-    <!-- Voucher -->
-    <section class="card">
-      <h2>Voucher</h2>
-      <div class="inline" id="voucherEntry">
-        <div class="field"><input id="voucher" placeholder="Enter code, e.g. BREWBITE10" aria-label="Voucher code" autocapitalize="characters"></div>
-        <button class="btn btn-ghost" type="button" id="applyVoucher">Apply</button>
-      </div>
-      <div id="voucherMsg"></div>
     </section>
 
     <!-- Payment method -->
@@ -230,7 +218,6 @@
   <div class="done-hero" id="done"></div>
 
   <div class="pad">
-    <div id="points"></div>
     <article class="receipt" id="receipt"></article>
   </div>
 </div>
