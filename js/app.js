@@ -149,26 +149,26 @@
   ].map(r => ({ id: r[0], name: r[1], cat: r[2], unit: r[3], stock: r[4], reorder: r[5], reorderQty: r[6], cost: r[7] }));
 
   // Recipe per menu item, for a Medium (12 oz) or a single serving.
-  // [ingredient, qty, scales] — "scales" = multiplied by largeFactor when Large is chosen.
+  // [ingredient, qty] per serving, the same at every size.
   // Drinks also use one cup (12 or 16 oz by size) and one lid, added automatically.
   const recipes = {
     americano: [['beans', 18]],
-    latte: [['beans', 18], ['milk', 180, 1]],
-    spanish: [['beans', 18], ['milk', 150, 1], ['condensed', 30, 1]],
-    macchiato: [['beans', 18], ['milk', 170, 1], ['vanilla', 15, 1], ['caramel', 10]],
-    mocha: [['beans', 18], ['milk', 160, 1], ['choco', 30, 1]],
-    seasalt: [['beans', 18], ['milk', 150, 1], ['cream', 30]],
-    matcha: [['matcha', 6, 1], ['milk', 200, 1]],
-    choco: [['choco', 40, 1], ['milk', 200, 1]],
-    strawberry: [['strawjam', 40, 1], ['milk', 200, 1]],
-    ube: [['ube', 40, 1], ['milk', 200, 1]],
-    wintermelon: [['blacktea', 5, 1], ['wintermelon', 40, 1], ['milk', 100, 1]],
-    okinawa: [['blacktea', 5, 1], ['brownsugar', 40, 1], ['milk', 120, 1]],
-    brownsugar: [['brownsugar', 40, 1], ['milk', 200, 1], ['pearls', 60]],
-    taro: [['taro', 30, 1], ['blacktea', 5, 1], ['milk', 150, 1]],
-    javachip: [['beans', 18], ['frappebase', 30, 1], ['choco', 20, 1], ['milk', 150, 1]],
-    cookies: [['frappebase', 30, 1], ['cookies', 25, 1], ['milk', 150, 1]],
-    matchafrappe: [['matcha', 8, 1], ['frappebase', 30, 1], ['milk', 150, 1]],
+    latte: [['beans', 18], ['milk', 180]],
+    spanish: [['beans', 18], ['milk', 150], ['condensed', 30]],
+    macchiato: [['beans', 18], ['milk', 170], ['vanilla', 15], ['caramel', 10]],
+    mocha: [['beans', 18], ['milk', 160], ['choco', 30]],
+    seasalt: [['beans', 18], ['milk', 150], ['cream', 30]],
+    matcha: [['matcha', 6], ['milk', 200]],
+    choco: [['choco', 40], ['milk', 200]],
+    strawberry: [['strawjam', 40], ['milk', 200]],
+    ube: [['ube', 40], ['milk', 200]],
+    wintermelon: [['blacktea', 5], ['wintermelon', 40], ['milk', 100]],
+    okinawa: [['blacktea', 5], ['brownsugar', 40], ['milk', 120]],
+    brownsugar: [['brownsugar', 40], ['milk', 200], ['pearls', 60]],
+    taro: [['taro', 30], ['blacktea', 5], ['milk', 150]],
+    javachip: [['beans', 18], ['frappebase', 30], ['choco', 20], ['milk', 150]],
+    cookies: [['frappebase', 30], ['cookies', 25], ['milk', 150]],
+    matchafrappe: [['matcha', 8], ['frappebase', 30], ['milk', 150]],
     tapa: [['tapa', 120], ['rice', 150], ['egg', 1], ['atchara', 30]],
     adobo: [['chicken', 150], ['rice', 150], ['egg', 1]],
     tocino: [['tocino', 120], ['rice', 150], ['egg', 1]],
@@ -225,7 +225,6 @@
     ingredients,
     recipes,
     optionRecipes,
-    largeFactor: 1.33,
     drinkCats: ['coffee', 'noncoffee', 'milktea', 'frappe']
   };
 
@@ -316,8 +315,29 @@
   };
 
   // ---- Cart ----
+  // Re-prices saved order lines from the current menu. Drops items and options that no longer exist.
+  function syncLines(lines) {
+    const D = window.BB_DATA;
+    const notes = [], out = [];
+    lines.forEach(l => {
+      const item = D.items.find(i => i.id === l.itemId);
+      if (!item) { notes.push(`${l.name} is no longer on the menu, so it was removed.`); return; }
+      const options = (l.options || []).map(o => {
+        const g = (item.options || []).find(x => x.id === o.groupId);
+        const ch = g && g.choices.find(x => x.id === o.id);
+        return ch ? Object.assign({}, o, { name: ch.name, price: ch.price }) : null;
+      }).filter(Boolean);
+      const unitPrice = item.price + options.reduce((n, o) => n + o.price, 0);
+      if (unitPrice !== l.unitPrice) notes.push(`${item.name} is now ${peso(unitPrice)} each.`);
+      out.push(Object.assign({}, l, { name: item.name, basePrice: item.price, options, unitPrice }));
+    });
+    return { lines: out, notes };
+  }
+
   const cart = {
     lines: () => get('cart', []),
+    // Brings the saved cart in line with the menu; returns what changed
+    sync() { const r = syncLines(cart.lines()); if (r.notes.length) cart.save(r.lines); return r.notes; },
     save: (lines) => set('cart', lines),
     add(line) {
       const lines = cart.lines();
@@ -474,7 +494,7 @@
       const add = (id, q) => { use[id] = (use[id] || 0) + q; };
       if (!item) return use;
       const large = (line.options || []).some(o => o.groupId === 'size' && o.id === 'l');
-      (D.recipes[item.id] || []).forEach(([id, q, scales]) => add(id, scales && large ? q * D.largeFactor : q));
+      (D.recipes[item.id] || []).forEach(([id, q]) => add(id, q));
       if (D.drinkCats.includes(item.cat)) { add(large ? 'cup16' : 'cup12', 1); add('lid', 1); }
       (line.options || []).forEach(o => {
         const r = D.optionRecipes[o.groupId + ':' + o.id];
@@ -665,7 +685,7 @@
     voided: { label: 'Voided', chip: 'chip-red' }
   };
 
-  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory, admin, history };
+  window.BB = { get, set, reset, peso, round2, ymd, nextNumber, dateTime, session, cart, syncLines, orders, payments, STATUS, seniorDiscount, orderTotal, staff, audit, menu, inventory, admin, history };
 })();
 
 /* Brew & Bite Café — helpers shared by the customer screens */
@@ -680,7 +700,7 @@
   }
 
   function sessionLabel(s) {
-    return s.type === 'dine-in' ? `TABLE ${s.table} · DINE-IN` : 'TAKE-OUT';
+    return s.type === 'dine-in' ? `TABLE ${s.table} · DINE-IN` : 'COUNTER ORDER';
   }
 
   function orderTypeLabel(o) {
@@ -1311,6 +1331,8 @@ BBViews['customer/menu'] = function () {
   const D = window.BB_DATA;
   const $ = (id) => document.getElementById(id);
   D.items.forEach(i => { i.soldOut = BB.menu.isSoldOut(i); }); // kitchen's sold-out switches
+  const cartNotes = BB.cart.sync();
+  if (cartNotes.length) setTimeout(() => BBC.toast(cartNotes.join(' ')), 400);
 
   const ICONS = {
     cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M9 3c0 1.5 1 1.5 1 3M13 3c0 1.5 1 1.5 1 3"/></svg>',
@@ -1340,7 +1362,7 @@ BBViews['customer/menu'] = function () {
 
   if (!session) { $('gate').hidden = false; return; }
   $('app').hidden = false;
-  $('sessionPill').textContent = session.type === 'dine-in' ? `TABLE ${session.table} · DINE-IN` : 'TAKE-OUT';
+  $('sessionPill').textContent = BBC.sessionLabel(session);
   const myOrders = BB.orders.mine();
   if (myOrders.length) {
     const active = myOrders.filter(o => !['completed', 'cancelled'].includes(o.status)).length;
@@ -1523,6 +1545,8 @@ BBViews['customer/menu'] = function () {
 BBViews['customer/cart'] = function () {
 (function () {
   if (!BBC.requireSession()) return;
+  const notes = BB.cart.sync();
+  if (notes.length) setTimeout(() => BBC.toast(notes.join(' ')), 300);
   const $ = (id) => document.getElementById(id);
 
   function render() {
@@ -1578,9 +1602,11 @@ BBViews['customer/checkout'] = function () {
   const D = BB_DATA;
   const $ = (id) => document.getElementById(id);
 
+  const notes = BB.cart.sync();
   const lines = BB.cart.lines();
   if (!lines.length) { location.replace('customer.html?view=cart'); return; }
   const subtotal = BB.round2(BB.cart.total());
+  if (notes.length) { $('cartNote').textContent = 'Your order was updated: ' + notes.join(' '); $('cartNote').hidden = false; }
 
   // Restore what the customer typed if they came back from the payment screen
   const saved = BB.get('checkoutForm', {});
@@ -1599,7 +1625,6 @@ BBViews['customer/checkout'] = function () {
   $('types').innerHTML = typeOptions.map(t => `
     <label class="choice"><input type="radio" name="type" value="${t.id}" ${t.id === startType ? 'checked' : ''}>
       <span><b>${t.title}</b><small>${t.sub}</small></span><span></span></label>`).join('');
-  $('deliveryArea').textContent = D.delivery.area + '.';
 
   // ---- Payment methods ----
   function renderMethods() {
@@ -1617,7 +1642,6 @@ BBViews['customer/checkout'] = function () {
 
   const type = () => document.querySelector('input[name="type"]:checked').value;
   const method = () => document.querySelector('input[name="method"]:checked').value;
-  const mobileValid = (m) => /^09\d{9}$/.test(m);
 
   // ---- Totals ----
   const deliveryFee = () => type() === 'delivery' ? D.delivery.fee : 0;
@@ -1626,7 +1650,6 @@ BBViews['customer/checkout'] = function () {
   function update() {
     const isDelivery = type() === 'delivery';
     $('deliveryFields').hidden = !isDelivery;
-    $('detailsHint').textContent = isDelivery ? 'Required for delivery' : 'Optional';
 
     const t = totals();
     $('items').innerHTML = BBC.lineRows(lines);
@@ -1647,29 +1670,21 @@ BBViews['customer/checkout'] = function () {
 
   // ---- Init and events ----
   renderMethods();
-  $('name').value = saved.name || '';
-  $('mobile').value = saved.mobile || '';
   $('address').value = saved.address || '';
   $('landmark').value = saved.landmark || '';
   update();
 
   $('types').addEventListener('change', () => { renderMethods(); update(); });
   $('methods').addEventListener('change', update);
-  $('mobile').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
 
   $('form').addEventListener('submit', (e) => {
     e.preventDefault();
     const err = $('detailsErr');
     err.hidden = true;
-    const name = $('name').value.trim();
-    const mobile = $('mobile').value.trim();
     const isDelivery = type() === 'delivery';
 
     let problem = '';
-    if (mobile && !mobileValid(mobile)) problem = 'Enter an 11-digit mobile number that starts with 09.';
-    else if (isDelivery && !name) problem = 'Enter your name so the rider knows who to look for.';
-    else if (isDelivery && !mobile) problem = 'Enter your mobile number so the rider can contact you.';
-    else if (isDelivery && !$('address').value.trim()) problem = 'Enter your delivery address.';
+    if (isDelivery && !$('address').value.trim()) problem = 'Enter your delivery address so the rider can find you.';
     const gone = lines.filter(l => { const it = D.items.find(i => i.id === l.itemId); return it && BB.menu.isSoldOut(it); });
     if (!problem && gone.length) problem = `Sorry, ${gone.map(l => l.name).join(', ')} just sold out. Go back to your order and remove it.`;
     if (problem) {
@@ -1681,12 +1696,11 @@ BBViews['customer/checkout'] = function () {
 
     const t = totals();
     const m = method();
-    BB.set('checkoutForm', { type: type(), method: m, name, mobile, address: $('address').value.trim(), landmark: $('landmark').value.trim() });
+    BB.set('checkoutForm', { type: type(), method: m, address: $('address').value.trim(), landmark: $('landmark').value.trim() });
 
     const draft = {
       type: type(),
       table: type() === 'dine-in' ? session.table : null,
-      customer: { name, mobile },
       delivery: isDelivery ? { address: $('address').value.trim(), landmark: $('landmark').value.trim() } : null,
       items: lines,
       subtotal: t.subtotal,
@@ -1726,8 +1740,7 @@ BBViews['customer/pay'] = function () {
   $('amount').textContent = BB.peso(draft.total, true);
   $('orderType').textContent = BBC.orderTypeLabel(draft);
   $('itemCount').textContent = draft.items.reduce((n, l) => n + l.qty, 0) + ' item(s)';
-  const m = draft.customer.mobile;
-  $('account').textContent = m ? m.slice(0, 4) + ' ••• ' + m.slice(-4) : 'Demo wallet';
+  $('account').textContent = 'Demo wallet';
   $('when').textContent = BB.dateTime(new Date().toISOString());
 
   $('payBtn').addEventListener('click', () => {
@@ -1799,7 +1812,6 @@ BBViews['customer/success'] = function () {
       <span>Order no.</span><span>${order.orderNo}</span>
       <span>Date</span><span>${BB.dateTime(order.createdAt)}</span>
       <span>Order type</span><span>${BBC.orderTypeLabel(order)}</span>
-      ${order.customer.name ? `<span>Customer</span><span>${BBC.esc(order.customer.name)}</span>` : ''}
       ${order.delivery ? `<span>Deliver to</span><span>${BBC.esc(order.delivery.address)}</span>` : ''}
     </div>
     <div class="r-sep"></div>
@@ -1979,6 +1991,8 @@ BBViews['cashier/pos'] = function () {
 
   function renderGrid() {
     D.items.forEach(i => { i.soldOut = BB.menu.isSoldOut(i); }); // kitchen's sold-out switches
+  const cartNotes = BB.cart.sync();
+  if (cartNotes.length) setTimeout(() => BBC.toast(cartNotes.join(' ')), 400);
     const q = $('search').value.trim().toLowerCase();
     const items = D.items.filter(i => (activeCat === 'all' || i.cat === activeCat) && (!q || i.name.toLowerCase().includes(q)));
     $('grid').innerHTML = items.map(i => `
@@ -2059,7 +2073,9 @@ BBViews['cashier/pos'] = function () {
   function subtotal() { return BB.round2(ticket.lines().reduce((n, l) => n + l.unitPrice * l.qty, 0)); }
 
   function renderTicket() {
-    const lines = ticket.lines();
+    const synced = BB.syncLines(ticket.lines());
+    if (synced.notes.length) { ticket.save(synced.lines); BBC.toast(synced.notes.join(' ')); }
+    const lines = synced.lines;
     $('lines').innerHTML = lines.length ? lines.map(l => `
       <div class="tl" data-id="${l.id}">
         <span><b>${esc(l.name)}</b>${BBC.optionText(l) ? `<small>${esc(BBC.optionText(l))}</small>` : ''}${l.notes ? `<small><i>${esc(l.notes)}</i></small>` : ''}</span>
@@ -2089,7 +2105,7 @@ BBViews['cashier/pos'] = function () {
 
   $('clear').addEventListener('click', () => {
     ticket.save([]);
-    $('custName').value = '';
+
     renderTicket();
   });
 
@@ -2099,7 +2115,6 @@ BBViews['cashier/pos'] = function () {
     const order = {
       type: type(),
       table: type() === 'dine-in' ? Number($('table').value) : null,
-      customer: { name: $('custName').value.trim(), mobile: '' },
       delivery: null,
       items: lines,
       subtotal: sub,
@@ -2160,7 +2175,7 @@ BBViews['cashier/orders'] = function () {
     const q = $('search').value.trim().toLowerCase();
     const t = TABS.find(x => x.id === tab);
     const rows = all.filter(t.test)
-      .filter(o => !q || o.orderNo.toLowerCase().includes(q) || (o.customer.name || '').toLowerCase().includes(q))
+      .filter(o => !q || o.orderNo.toLowerCase().includes(q))
       .sort((a, b) => tab === 'awaiting' ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt));
 
     $('rows').innerHTML = rows.length ? rows.map(o => {
@@ -2175,7 +2190,7 @@ BBViews['cashier/orders'] = function () {
       else if (o.status === 'completed') acts = `<a class="btn btn-ghost btn-sm" href="cashier.html?view=receipt&order=${o.id}">Receipt</a>`;
       else if (o.status === 'voided') acts = `<a class="btn btn-ghost btn-sm" href="cashier.html?view=receipt&order=${o.id}">Receipt</a>`;
       return `<tr class="${BB.orders.unpaid(o) ? 'waiting' : ''}">
-        <td><b class="mono">${o.orderNo}</b><small>${BBS.ago(o.createdAt)}${o.customer.name ? ' · ' + esc(o.customer.name) : ''}</small></td>
+        <td><b class="mono">${o.orderNo}</b><small>${BBS.ago(o.createdAt)}</small></td>
         <td>${BBC.orderTypeLabel(o)}<small>${o.source === 'pos' ? 'Counter' : 'QR order'}</small></td>
         <td class="items-cell">${esc(items)}${o.senior ? `<small>${o.senior.type} discount</small>` : ''}${o.cancelReason ? `<small>${esc(o.cancelReason)}</small>` : ''}</td>
         <td class="r mono">${BB.peso(o.total, true)}</td>
@@ -2267,7 +2282,6 @@ BBViews['cashier/payment'] = function () {
     <span>Order no.</span><span class="mono">${order.orderNo}</span>
     <span>Placed</span><span>${BB.dateTime(order.createdAt)} · ${BBS.ago(order.createdAt)}</span>
     <span>Type</span><span>${BBC.orderTypeLabel(order)}</span>
-    ${order.customer.name ? `<span>Customer</span><span>${esc(order.customer.name)}${order.customer.mobile ? ' · ' + order.customer.mobile : ''}</span>` : ''}
     ${order.delivery ? `<span>Deliver to</span><span>${esc(order.delivery.address)}</span>` : ''}`;
   $('items').innerHTML = BBC.lineRows(order.items);
 
@@ -2403,7 +2417,6 @@ BBViews['cashier/receipt'] = function () {
     <div class="row"><span>Date</span><span>${BB.dateTime(pay ? pay.paidAt : o.createdAt)}</span></div>
     <div class="row"><span>Type</span><span>${BBC.orderTypeLabel(o)}</span></div>
     <div class="row"><span>Cashier</span><span>${esc(o.cashier || (pay && pay.receivedBy) || 'Self-service (QR)')}</span></div>
-    ${o.customer.name ? `<div class="row"><span>Customer</span><span>${esc(o.customer.name)}</span></div>` : ''}
     <hr>
     ${lines}
     <hr>
@@ -2486,7 +2499,7 @@ BBViews['kitchen/display'] = function () {
       <article class="tk${fresh ? ' fresh' : ''}" data-id="${o.id}">
         <div class="tk-head">
           <span class="tk-no">#${o.orderNo.slice(-4)}</span>${where(o)}
-          <span class="tk-meta">${o.source === 'pos' ? 'Counter' : 'QR'}${o.customer.name ? ' · ' + esc(o.customer.name) : ''}</span>
+          <span class="tk-meta">${o.source === 'pos' ? 'Counter order' : 'QR order'}</span>
           <span class="tk-time ${timeCls}" data-start="${startedAt(o)}">${t.text}</span>
         </div>
         ${BB.orders.isCod(o) && !o.paidAt ? '<span class="tk-flag">Cash on delivery · rider collects</span>' : ''}
@@ -3030,27 +3043,25 @@ BBViews['admin/menu'] = function () {
   }
   $('iTpl').addEventListener('change', updateLargeVisibility);
 
-  // One row per ingredient: picker, quantity, unit. Existing "scales with Large" flags are kept as they are.
+  // One row per ingredient: picker, quantity, unit (the same amount at every size)
   function ingOptions(sel) {
     const cats = [...new Set(I.ingredients().map(i => i.cat))];
     return cats.map(cg => `<optgroup label="${esc(cg)}">${I.ingredients().filter(i => i.cat === cg).map(i => `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
   }
-  function ingRow([id, qty, scales]) {
+  function ingRow([id, qty]) {
     const g = I.ing(id) || I.ingredients()[0];
-    return `<div class="ing-row" data-scale="${scales ? 1 : 0}">
+    return `<div class="ing-row">
       <select class="input" data-f="ing" aria-label="Ingredient">${ingOptions(g.id)}</select>
       <span class="unit-input"><input class="input" data-f="qty" type="number" min="0" step="any" value="${qty}" aria-label="Quantity"><span data-f="unit">${g.unit}</span></span>
       <button type="button" class="x-btn" data-f="rm" aria-label="Remove ingredient">×</button></div>`;
   }
   function readIngs() {
     return [...$('iIngs').querySelectorAll('.ing-row')].map(r => {
-      const line = [r.querySelector('[data-f="ing"]').value, parseFloat(r.querySelector('[data-f="qty"]').value) || 0];
-      if (r.dataset.scale === '1') line.push(1);
-      return line;
+      return [r.querySelector('[data-f="ing"]').value, parseFloat(r.querySelector('[data-f="qty"]').value) || 0];
     });
   }
   function updateCupNote() {
-    $('iCupNote').textContent = D.drinkCats.includes($('iCat').value) ? 'A cup and lid are deducted automatically for drinks.' : '';
+    $('iCupNote').textContent = D.drinkCats.includes($('iCat').value) ? 'Same amounts for every size. A 12 or 16 oz cup and a lid are deducted automatically.' : 'Same amounts for every serving.';
   }
   $('iCat').addEventListener('change', updateCupNote);
   $('iAddIng').addEventListener('click', () => {

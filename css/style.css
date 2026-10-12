@@ -940,6 +940,7 @@ body.m-staff { background: #fff; }
 .v-cashier-pos .totals div { display: flex; justify-content: space-between; }
 .v-cashier-pos .totals span:last-child { font-variant-numeric: tabular-nums; }
 .v-cashier-pos .totals .big { font-weight: 700; font-size: 1.15rem; padding-top: 6px; border-top: 1px dashed var(--line); margin-top: 4px; }
+.v-cashier-pos .totals .big:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
 .v-cashier-pos .totals .minus span:last-child { color: var(--accent-strong); }
 .v-cashier-pos .foot-btns { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
 .v-cashier-pos .foot-btns .btn-primary { padding: 13px; font-size: 1rem; }
