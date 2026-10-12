@@ -103,59 +103,50 @@
   ];
 
   // ---------------- Inventory ----------------
-  const suppliers = [
-    { id: 's1', name: 'Bean There Coffee Roasters', contact: 'Rico Aquino', phone: '0917 820 3311', email: 'orders@beanthere.ph', address: 'La Trinidad, Benguet', leadDays: 3, terms: '15 days' },
-    { id: 's2', name: 'Central Luzon Dairy Co.', contact: 'Grace Lacson', phone: '0918 455 2090', email: 'sales@cldairy.ph', address: 'Capas, Tarlac', leadDays: 1, terms: 'COD' },
-    { id: 's3', name: 'Manila Café Supplies', contact: 'Jun Villanueva', phone: '0927 301 7788', email: 'jun@mcsupplies.ph', address: 'Quezon City, Metro Manila', leadDays: 4, terms: '30 days' },
-    { id: 's4', name: 'Mang Ben’s Meats & Produce', contact: 'Ben Ocampo', phone: '0906 114 5523', email: 'mangben.tarlac@gmail.com', address: 'Tarlac City Public Market', leadDays: 1, terms: 'COD' },
-    { id: 's5', name: 'Pack & Go Packaging', contact: 'Ivy Tan', phone: '0995 660 1402', email: 'ivy@packandgo.ph', address: 'San Fernando, Pampanga', leadDays: 2, terms: '15 days' },
-    { id: 's6', name: 'Golden Crust Bakery', contact: 'Nora Sison', phone: '0919 772 0045', email: 'goldencrust.tarlac@gmail.com', address: 'San Vicente, Tarlac City', leadDays: 1, terms: 'COD' }
-  ];
-
-  // [id, name, category, unit, stock, reorder level, reorder qty, cost per unit (₱), supplier]
+  // [id, name, category, unit, stock, reorder level, usual restock qty, cost per unit (₱)]
   const ingredients = [
-    ['beans', 'Espresso beans', 'Coffee & tea', 'g', 6200, 3000, 5000, 1.2, 's1'],
-    ['blacktea', 'Black tea leaves', 'Coffee & tea', 'g', 800, 300, 1000, 0.8, 's3'],
-    ['matcha', 'Matcha powder', 'Coffee & tea', 'g', 650, 300, 1000, 3.5, 's3'],
-    ['milk', 'Fresh milk', 'Dairy', 'ml', 18000, 10000, 20000, 0.095, 's2'],
-    ['condensed', 'Condensed milk', 'Dairy', 'ml', 2400, 1000, 3000, 0.12, 's2'],
-    ['cream', 'Whipping cream', 'Dairy', 'ml', 900, 1000, 2000, 0.3, 's2'],
-    ['creamcheese', 'Cream cheese', 'Dairy', 'g', 350, 500, 1000, 0.6, 's2'],
-    ['cheese', 'Cheese slices', 'Dairy', 'pc', 40, 20, 50, 7, 's2'],
-    ['oat', 'Oat milk', 'Milk alternatives', 'ml', 1800, 4000, 6000, 0.22, 's3'],
-    ['almond', 'Almond milk', 'Milk alternatives', 'ml', 2500, 1000, 3000, 0.2, 's3'],
-    ['choco', 'Chocolate sauce', 'Syrups & sauces', 'ml', 2100, 800, 2000, 0.35, 's3'],
-    ['caramel', 'Caramel sauce', 'Syrups & sauces', 'ml', 1300, 500, 1500, 0.4, 's3'],
-    ['vanilla', 'Vanilla syrup', 'Syrups & sauces', 'ml', 1500, 500, 1500, 0.45, 's3'],
-    ['wintermelon', 'Wintermelon syrup', 'Syrups & sauces', 'ml', 2000, 800, 2000, 0.25, 's3'],
-    ['brownsugar', 'Brown sugar syrup', 'Syrups & sauces', 'ml', 3000, 1000, 3000, 0.15, 's3'],
-    ['ube', 'Ube halaya', 'Syrups & sauces', 'g', 1200, 500, 1000, 0.4, 's3'],
-    ['strawjam', 'Strawberry jam', 'Syrups & sauces', 'g', 900, 400, 1000, 0.35, 's3'],
-    ['taro', 'Taro powder', 'Milk tea add-ins', 'g', 0, 300, 1000, 0.6, 's3'],
-    ['pearls', 'Tapioca pearls', 'Milk tea add-ins', 'g', 4000, 2000, 5000, 0.12, 's3'],
-    ['nata', 'Nata de coco', 'Milk tea add-ins', 'g', 1500, 800, 2000, 0.15, 's3'],
-    ['pudding', 'Egg pudding cups', 'Milk tea add-ins', 'pc', 20, 12, 30, 12, 's3'],
-    ['frappebase', 'Frappe base powder', 'Milk tea add-ins', 'g', 2600, 1000, 3000, 0.5, 's3'],
-    ['cookies', 'Chocolate cookie crumbs', 'Milk tea add-ins', 'g', 1200, 500, 1000, 0.4, 's3'],
-    ['rice', 'Rice', 'Kitchen', 'g', 15000, 8000, 25000, 0.06, 's4'],
-    ['egg', 'Eggs', 'Kitchen', 'pc', 84, 60, 120, 9, 's4'],
-    ['tapa', 'Beef tapa', 'Kitchen', 'g', 3200, 2000, 5000, 0.55, 's4'],
-    ['chicken', 'Chicken', 'Kitchen', 'g', 4500, 2000, 5000, 0.28, 's4'],
-    ['tocino', 'Pork tocino', 'Kitchen', 'g', 2600, 1500, 4000, 0.4, 's4'],
-    ['longganisa', 'Garlic longganisa', 'Kitchen', 'pc', 45, 30, 60, 12, 's4'],
-    ['spam', 'Luncheon meat', 'Kitchen', 'g', 1800, 1000, 2000, 0.6, 's4'],
-    ['ham', 'Sliced ham', 'Kitchen', 'g', 1200, 500, 1000, 0.5, 's4'],
-    ['atchara', 'Atchara', 'Kitchen', 'g', 1400, 500, 1500, 0.15, 's4'],
-    ['fries', 'Frozen fries', 'Kitchen', 'g', 6000, 3000, 8000, 0.18, 's4'],
-    ['seasoning', 'Fries seasoning', 'Kitchen', 'g', 400, 150, 500, 0.5, 's4'],
-    ['croissant', 'Butter croissant', 'Bakery', 'pc', 14, 10, 24, 38, 's6'],
-    ['ensaymada', 'Ensaymada', 'Bakery', 'pc', 18, 10, 24, 28, 's6'],
-    ['pandesal', 'Cheese pandesal', 'Bakery', 'pc', 40, 24, 60, 9, 's6'],
-    ['bread', 'Sandwich bread slices', 'Bakery', 'pc', 30, 24, 60, 5, 's6'],
-    ['cup12', 'Cup 12 oz', 'Packaging', 'pc', 320, 200, 500, 4.5, 's5'],
-    ['cup16', 'Cup 16 oz', 'Packaging', 'pc', 180, 200, 500, 5.5, 's5'],
-    ['lid', 'Cup lids', 'Packaging', 'pc', 520, 300, 1000, 1.5, 's5']
-  ].map(r => ({ id: r[0], name: r[1], cat: r[2], unit: r[3], stock: r[4], reorder: r[5], reorderQty: r[6], cost: r[7], supplier: r[8] }));
+    ['beans', 'Espresso beans', 'Coffee & tea', 'g', 6200, 3000, 5000, 1.2],
+    ['blacktea', 'Black tea leaves', 'Coffee & tea', 'g', 800, 300, 1000, 0.8],
+    ['matcha', 'Matcha powder', 'Coffee & tea', 'g', 650, 300, 1000, 3.5],
+    ['milk', 'Fresh milk', 'Dairy', 'ml', 18000, 10000, 20000, 0.095],
+    ['condensed', 'Condensed milk', 'Dairy', 'ml', 2400, 1000, 3000, 0.12],
+    ['cream', 'Whipping cream', 'Dairy', 'ml', 900, 1000, 2000, 0.3],
+    ['creamcheese', 'Cream cheese', 'Dairy', 'g', 350, 500, 1000, 0.6],
+    ['cheese', 'Cheese slices', 'Dairy', 'pc', 40, 20, 50, 7],
+    ['oat', 'Oat milk', 'Milk alternatives', 'ml', 1800, 4000, 6000, 0.22],
+    ['almond', 'Almond milk', 'Milk alternatives', 'ml', 2500, 1000, 3000, 0.2],
+    ['choco', 'Chocolate sauce', 'Syrups & sauces', 'ml', 2100, 800, 2000, 0.35],
+    ['caramel', 'Caramel sauce', 'Syrups & sauces', 'ml', 1300, 500, 1500, 0.4],
+    ['vanilla', 'Vanilla syrup', 'Syrups & sauces', 'ml', 1500, 500, 1500, 0.45],
+    ['wintermelon', 'Wintermelon syrup', 'Syrups & sauces', 'ml', 2000, 800, 2000, 0.25],
+    ['brownsugar', 'Brown sugar syrup', 'Syrups & sauces', 'ml', 3000, 1000, 3000, 0.15],
+    ['ube', 'Ube halaya', 'Syrups & sauces', 'g', 1200, 500, 1000, 0.4],
+    ['strawjam', 'Strawberry jam', 'Syrups & sauces', 'g', 900, 400, 1000, 0.35],
+    ['taro', 'Taro powder', 'Milk tea add-ins', 'g', 0, 300, 1000, 0.6],
+    ['pearls', 'Tapioca pearls', 'Milk tea add-ins', 'g', 4000, 2000, 5000, 0.12],
+    ['nata', 'Nata de coco', 'Milk tea add-ins', 'g', 1500, 800, 2000, 0.15],
+    ['pudding', 'Egg pudding cups', 'Milk tea add-ins', 'pc', 20, 12, 30, 12],
+    ['frappebase', 'Frappe base powder', 'Milk tea add-ins', 'g', 2600, 1000, 3000, 0.5],
+    ['cookies', 'Chocolate cookie crumbs', 'Milk tea add-ins', 'g', 1200, 500, 1000, 0.4],
+    ['rice', 'Rice', 'Kitchen', 'g', 15000, 8000, 25000, 0.06],
+    ['egg', 'Eggs', 'Kitchen', 'pc', 84, 60, 120, 9],
+    ['tapa', 'Beef tapa', 'Kitchen', 'g', 3200, 2000, 5000, 0.55],
+    ['chicken', 'Chicken', 'Kitchen', 'g', 4500, 2000, 5000, 0.28],
+    ['tocino', 'Pork tocino', 'Kitchen', 'g', 2600, 1500, 4000, 0.4],
+    ['longganisa', 'Garlic longganisa', 'Kitchen', 'pc', 45, 30, 60, 12],
+    ['spam', 'Luncheon meat', 'Kitchen', 'g', 1800, 1000, 2000, 0.6],
+    ['ham', 'Sliced ham', 'Kitchen', 'g', 1200, 500, 1000, 0.5],
+    ['atchara', 'Atchara', 'Kitchen', 'g', 1400, 500, 1500, 0.15],
+    ['fries', 'Frozen fries', 'Kitchen', 'g', 6000, 3000, 8000, 0.18],
+    ['seasoning', 'Fries seasoning', 'Kitchen', 'g', 400, 150, 500, 0.5],
+    ['croissant', 'Butter croissant', 'Bakery', 'pc', 14, 10, 24, 38],
+    ['ensaymada', 'Ensaymada', 'Bakery', 'pc', 18, 10, 24, 28],
+    ['pandesal', 'Cheese pandesal', 'Bakery', 'pc', 40, 24, 60, 9],
+    ['bread', 'Sandwich bread slices', 'Bakery', 'pc', 30, 24, 60, 5],
+    ['cup12', 'Cup 12 oz', 'Packaging', 'pc', 320, 200, 500, 4.5],
+    ['cup16', 'Cup 16 oz', 'Packaging', 'pc', 180, 200, 500, 5.5],
+    ['lid', 'Cup lids', 'Packaging', 'pc', 520, 300, 1000, 1.5]
+  ].map(r => ({ id: r[0], name: r[1], cat: r[2], unit: r[3], stock: r[4], reorder: r[5], reorderQty: r[6], cost: r[7] }));
 
   // Recipe per menu item, for a Medium (12 oz) or a single serving.
   // [ingredient, qty, scales] — "scales" = multiplied by largeFactor when Large is chosen.
@@ -209,15 +200,6 @@
     'side:fries': { add: [['fries', 120], ['seasoning', 3]] }
   };
 
-  // Sample purchase orders, dated relative to today
-  const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString();
-  const samplePOs = [
-    { id: 'po1', poNo: 'PO-0001', supplier: 's2', status: 'received', createdAt: daysAgo(7), expectedAt: daysAgo(6), receivedAt: daysAgo(6), createdBy: 'Liza Garcia', receivedBy: 'Liza Garcia', notes: 'Weekly dairy',
-      items: [{ ing: 'milk', qty: 20000, cost: 0.095 }, { ing: 'cream', qty: 2000, cost: 0.3 }] },
-    { id: 'po2', poNo: 'PO-0002', supplier: 's1', status: 'sent', createdAt: daysAgo(2), expectedAt: daysAgo(-1), createdBy: 'Liza Garcia', notes: 'House blend, medium roast',
-      items: [{ ing: 'beans', qty: 5000, cost: 1.2 }] }
-  ];
-
   window.BB_DATA = {
     cafe: {
       name: 'Brew & Bite Café',
@@ -240,14 +222,11 @@
     seniorPwd: { percent: 20, vat: 0.12 },
     categories,
     items,
-    suppliers,
     ingredients,
     recipes,
     optionRecipes,
     largeFactor: 1.33,
-    drinkCats: ['coffee', 'noncoffee', 'milktea', 'frappe'],
-    samplePOs,
-    wasteReasons: ['Spoiled or expired', 'Spilled or dropped', 'Remade (wrong order)', 'Quality issue', 'Used for staff meal', 'Other']
+    drinkCats: ['coffee', 'noncoffee', 'milktea', 'frappe']
   };
 
   // Option-group templates the admin can attach to new menu items
@@ -459,7 +438,7 @@
     }
   };
 
-  // ---- Inventory: ingredients, recipes, stock movements, suppliers, purchase orders ----
+  // ---- Inventory: ingredients, recipes, stock movements ----
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const who = () => { const s = staff.current(); return s ? s.name : 'System (auto)'; };
 
@@ -471,21 +450,6 @@
     },
     saveIngredients: (list) => set('ingredients', list),
     ing: (id) => inventory.ingredients().find(i => i.id === id) || null,
-
-    suppliers() {
-      let list = get('suppliers', null);
-      if (!list) { list = clone(window.BB_DATA.suppliers); set('suppliers', list); }
-      return list;
-    },
-    saveSuppliers: (list) => set('suppliers', list),
-    supplier: (id) => inventory.suppliers().find(s => s.id === id) || null,
-
-    purchaseOrders() {
-      let list = get('purchaseOrders', null);
-      if (!list) { list = clone(window.BB_DATA.samplePOs); set('purchaseOrders', list); }
-      return list;
-    },
-    savePOs: (list) => set('purchaseOrders', list),
 
     movements: () => get('movements', []),
 
@@ -778,11 +742,7 @@
       { id: 'kitchen', label: 'Kitchen display', href: 'kitchen.html', built: true }
     ]},
     { group: 'Inventory', roles: ['inventory', 'admin'], links: [
-      { id: 'ingredients', label: 'Ingredients', href: 'inventory.html', built: true },
-      { id: 'alerts', label: 'Low-stock alerts', href: 'inventory.html?view=alerts', built: true, badge: 'lowstock' },
-      { id: 'suppliers', label: 'Suppliers', href: 'inventory.html?view=suppliers', built: true },
-      { id: 'po', label: 'Purchase orders', href: 'inventory.html?view=purchase-orders', built: true },
-      { id: 'wastage', label: 'Wastage & counts', href: 'inventory.html?view=wastage', built: true }
+      { id: 'ingredients', label: 'Stock', href: 'inventory.html', built: true, badge: 'lowstock' }
     ]},
     { group: 'Admin', roles: ['admin'], links: [
       { id: 'dashboard', label: 'Dashboard', href: 'admin.html', built: true },
@@ -1023,11 +983,7 @@ BBViews['index/index'] = function () {
       { name: 'Kitchen display and sold-out switches', file: 'kitchen.html' }
     ]},
     { title: 'Inventory', role: 'inventory', who: 'Stock clerk · back-office PC', icon: icon.box, badge: 'low', screens: [
-      { name: 'Ingredients and stock', file: 'inventory.html' },
-      { name: 'Low-stock alerts', file: 'inventory.html?view=alerts' },
-      { name: 'Suppliers', file: 'inventory.html?view=suppliers' },
-      { name: 'Purchase orders', file: 'inventory.html?view=purchase-orders' },
-      { name: 'Wastage and stock counts', file: 'inventory.html?view=wastage' }
+      { name: 'Stock, low-stock alerts and restocking', file: 'inventory.html' }
     ]},
     { title: 'Admin', role: 'admin', who: 'Owner · laptop or phone', icon: icon.chart, screens: [
       { name: 'Sales dashboard', file: 'admin.html' },
@@ -1237,7 +1193,7 @@ BBViews['login/login'] = function () {
   const SCREEN = {
     cashier: { pos: 'Point of sale', orders: 'Orders', payment: 'Take payment', receipt: 'Receipt' },
     kitchen: { display: 'Kitchen display' },
-    inventory: { ingredients: 'Ingredients', alerts: 'Low-stock alerts', suppliers: 'Suppliers', 'purchase-orders': 'Purchase orders', wastage: 'Wastage & counts' },
+    inventory: { ingredients: 'Stock' },
     admin: { dashboard: 'Dashboard', menu: 'Menu & prices', recipes: 'Recipes & costing', users: 'Users & roles', audit: 'Audit logs' }
   };
   const DEFAULT_VIEW = { cashier: 'pos', kitchen: 'display', inventory: 'ingredients', admin: 'dashboard' };
@@ -2681,10 +2637,12 @@ BBViews['inventory/ingredients'] = function () {
   const user = BBS.init(['inventory'], 'ingredients');
   if (!user) return;
   const I = BB.inventory;
+  const D = BB_DATA;
   const $ = (id) => document.getElementById(id);
   const esc = BBC.esc;
   const LEVEL = { ok: ['In stock', 'chip-green'], low: ['Low', 'chip-caramel'], out: ['Out of stock', 'chip-red'] };
-  const TYPE = { SALE: 'Used in order', RETURN: 'Returned (cancel/void)', PURCHASE: 'Received (PO)', WASTAGE: 'Wastage', ADJUST: 'Stock count' };
+  const RANK = { out: 0, low: 1, ok: 2 };
+  const TYPE = { SALE: 'Used in order', RETURN: 'Returned (cancel/void)', PURCHASE: 'Restocked', WASTAGE: 'Wastage', ADJUST: 'Stock count' };
   let tab = location.hash === '#low' ? 'low' : 'all';
 
   function costText(c, unit) { return '₱' + (c < 1 ? c.toFixed(3) : c.toFixed(2)) + '/' + unit; }
@@ -2700,6 +2658,14 @@ BBViews['inventory/ingredients'] = function () {
       <div class="kpi${out ? ' alert' : ''}"><small>Out of stock</small><strong>${out}</strong></div>
       <div class="kpi"><small>Stock value</small><strong>${BB.peso(value, true)}</strong></div>`;
 
+    // Menu items customers can't order because an ingredient ran out
+    const blocked = D.items.map(it => ({ it, short: I.shortFor(it) })).filter(x => x.short.length);
+    $('impact').hidden = !blocked.length;
+    $('impact').innerHTML = blocked.length ? `
+      <h2>${blocked.length} menu item${blocked.length > 1 ? 's' : ''} unavailable to customers</h2>
+      <div class="chips">${blocked.map(b => `<span class="chip">${esc(b.it.name)} · needs ${b.short.map(id => esc(I.ing(id).name)).join(', ')}</span>`).join('')}</div>
+      <span class="hint">These show as Sold out on the customer menu and the POS until you restock.</span>` : '';
+
     const tabs = [['all', 'All', list.length], ['low', 'Low or out', low + out], ['ok', 'In stock', list.length - low - out]];
     $('tabs').innerHTML = tabs.map(([id, l, n]) => `<button type="button" data-tab="${id}" class="${id === tab ? 'on' : ''}">${l}<span class="n">${n}</span></button>`).join('');
 
@@ -2708,34 +2674,84 @@ BBViews['inventory/ingredients'] = function () {
     $('cat').innerHTML = '<option value="">All categories</option>' + cats.map(c => `<option${c === curCat ? ' selected' : ''}>${esc(c)}</option>`).join('');
     $('catList').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
 
+    // Out of stock first, then low, so the alerts sit at the top of the list
     const q = $('search').value.trim().toLowerCase();
     const rows = list.filter(i =>
       (tab === 'all' || (tab === 'low' ? I.level(i) !== 'ok' : I.level(i) === 'ok')) &&
-      (!curCat || i.cat === curCat) && (!q || i.name.toLowerCase().includes(q)));
+      (!curCat || i.cat === curCat) && (!q || i.name.toLowerCase().includes(q)))
+      .sort((a, b) => RANK[I.level(a)] - RANK[I.level(b)]);
 
     $('rows').innerHTML = rows.map(i => {
       const lv = I.level(i);
       const pct = Math.max(0, Math.min(100, i.stock / (i.reorder * 2 || 1) * 100));
-      const sup = I.supplier(i.supplier);
-      return `<tr>
-        <td class="name-cell"><b>${esc(i.name)}</b><small>${esc(i.cat)} · ${(n => n ? `used in ${n} item${n === 1 ? '' : 's'}` : 'used in add-ons')(I.usedIn(i.id).length)}</small></td>
+      return `<tr class="${lv === 'ok' ? '' : 'need-' + lv}">
+        <td class="name-cell"><b>${esc(i.name)}</b><small>${esc(i.cat)} · ${['cup12', 'cup16', 'lid'].includes(i.id) ? 'used in every drink' : (n => n ? `used in ${n} item${n === 1 ? '' : 's'}` : 'used in add-ons')(I.usedIn(i.id).length)}</small></td>
         <td><div class="lvl"><span class="num">${I.fmt(i.stock, i.unit)}</span><span class="lvl-bar"><i class="${lv}" style="width:${pct}%"></i></span></div></td>
         <td class="r num">${I.fmt(i.reorder, i.unit)}</td>
         <td class="r num">${BB.peso(Math.max(0, i.stock) * i.cost, true)}<small class="mono">${costText(i.cost, i.unit)}</small></td>
-        <td class="sup-cell" title="${sup ? esc(sup.name) : ''}">${sup ? esc(sup.name) : '<span class="muted">None</span>'}</td>
         <td><span class="chip ${LEVEL[lv][1]}">${LEVEL[lv][0]}</span></td>
-        <td class="r" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" data-hist="${i.id}">History</button> <button class="btn btn-ghost btn-sm" data-edit="${i.id}">Edit</button></td>
+        <td class="r" style="white-space:nowrap"><button class="btn ${lv === 'ok' ? 'btn-ghost' : 'btn-primary'} btn-sm" data-restock="${i.id}">Restock</button> <button class="btn btn-ghost btn-sm" data-hist="${i.id}">History</button> <button class="btn btn-ghost btn-sm" data-edit="${i.id}">Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="7" class="empty-row">No ingredients match.</td></tr>';
+    }).join('') || '<tr><td colspan="6" class="empty-row">No ingredients match.</td></tr>';
   }
 
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; render(); } });
   $('cat').addEventListener('change', render);
   $('search').addEventListener('input', render);
 
+  // ---- Restock: add a delivery, or set the counted amount ----
+  let restocking = null;
+  function openRestock(id) {
+    restocking = I.ing(id);
+    $('rTitle').textContent = 'Restock ' + restocking.name;
+    $('rOnHand').innerHTML = `On hand <b>${I.fmt(restocking.stock, restocking.unit)}</b> · reorder at ${I.fmt(restocking.reorder, restocking.unit)}`;
+    document.querySelector('input[name="rMode"][value="add"]').checked = true;
+    $('rQty').value = restocking.reorderQty;
+    $('rNote').value = '';
+    $('rErr').hidden = true;
+    updateRestock();
+    $('restockBack').hidden = false;
+    $('rQty').focus();
+  }
+  const rMode = () => document.querySelector('input[name="rMode"]:checked').value;
+  function updateRestock() {
+    if (!restocking) return;
+    const add = rMode() === 'add';
+    $('rQtyLbl').textContent = add ? 'Quantity received' : 'Counted on the shelf';
+    $('rUnit').textContent = restocking.unit;
+    const v = parseFloat($('rQty').value);
+    const after = add ? restocking.stock + (v || 0) : (v || 0);
+    $('rPreview').innerHTML = $('rQty').value === '' ? '' :
+      `Stock becomes <b>${I.fmt(after, restocking.unit)}</b> (${after - restocking.stock >= 0 ? '+' : ''}${I.fmt(after - restocking.stock, restocking.unit)})`;
+  }
+  $('restockForm').addEventListener('input', updateRestock);
+  $('restockForm').addEventListener('change', (e) => {
+    if (e.target.name === 'rMode') $('rQty').value = rMode() === 'add' ? restocking.reorderQty : restocking.stock;
+    updateRestock();
+  });
+  $('restockForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = parseFloat($('rQty').value);
+    const add = rMode() === 'add';
+    if (add ? !(v > 0) : !(v >= 0)) { $('rErr').textContent = add ? 'Enter how much arrived, more than zero.' : 'Enter the counted amount (0 if there is none).'; $('rErr').hidden = false; return; }
+    const note = $('rNote').value.trim();
+    if (add) {
+      I.move(restocking.id, v, 'PURCHASE', '', note || 'Delivery received');
+      BB.audit.log('Restocked', `${restocking.name} · +${I.fmt(v, restocking.unit)}${note ? ' · ' + note : ''}`);
+      BBC.toast(`${restocking.name} +${I.fmt(v, restocking.unit)}`);
+    } else {
+      const diff = BB.round2(v - restocking.stock);
+      if (diff === 0) { BBC.toast('Count matches. Nothing to change.'); $('restockBack').hidden = true; return; }
+      I.move(restocking.id, diff, 'ADJUST', '', note || 'Physical count');
+      BB.audit.log('Stock count', `${restocking.name}: ${I.fmt(restocking.stock, restocking.unit)} → ${I.fmt(v, restocking.unit)}`);
+      BBC.toast(`${restocking.name} set to ${I.fmt(v, restocking.unit)}`);
+    }
+    $('restockBack').hidden = true;
+    render();
+  });
+
   // ---- Add / edit ----
   let editing = null;
-  $('eSupplier').innerHTML = '<option value="">None</option>' + I.suppliers().map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
   function openEdit(id) {
     editing = id ? I.ing(id) : null;
     $('eTitle').textContent = editing ? 'Edit ' + editing.name : 'Add ingredient';
@@ -2746,7 +2762,6 @@ BBViews['inventory/ingredients'] = function () {
     $('eReorder').value = editing ? editing.reorder : '';
     $('eReorderQty').value = editing ? editing.reorderQty : '';
     $('eCost').value = editing ? editing.cost : '';
-    $('eSupplier').value = editing ? editing.supplier || '' : '';
     $('eStockWrap').hidden = !!editing;
     $('eStock').value = 0;
     $('eErr').hidden = true;
@@ -2768,13 +2783,12 @@ BBViews['inventory/ingredients'] = function () {
 
     const list = I.ingredients();
     if (editing) {
-      const ing = list.find(i => i.id === editing.id);
-      Object.assign(ing, { name, cat, reorder, reorderQty, cost, supplier: $('eSupplier').value });
+      Object.assign(list.find(i => i.id === editing.id), { name, cat, reorder, reorderQty, cost });
       I.saveIngredients(list);
       BB.audit.log('Edited ingredient', name);
     } else {
       const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36);
-      list.push({ id, name, cat, unit: $('eUnit').value, stock: 0, reorder, reorderQty, cost, supplier: $('eSupplier').value });
+      list.push({ id, name, cat, unit: $('eUnit').value, stock: 0, reorder, reorderQty, cost });
       I.saveIngredients(list);
       const opening = parseFloat($('eStock').value) || 0;
       if (opening) I.move(id, opening, 'ADJUST', '', 'Opening stock');
@@ -2802,12 +2816,13 @@ BBViews['inventory/ingredients'] = function () {
           <td class="mono" style="font-size:.8rem">${esc(m.ref)}</td>
           <td class="r num ${m.qty > 0 ? 'mv-in' : 'mv-out'}">${m.qty > 0 ? '+' : ''}${I.fmt(m.qty, ing.unit)}</td>
           <td class="r num">${I.fmt(m.after, ing.unit)}</td><td>${esc(m.user)}</td></tr>`).join('')
-          : '<tr><td colspan="6" class="empty-row">No stock movements yet. Paid orders, deliveries and wastage will show here.</td></tr>'}</tbody></table>
+          : '<tr><td colspan="6" class="empty-row">No stock movements yet. Paid orders and restocks will show here.</td></tr>'}</tbody></table>
       </div>`;
     $('histBack').hidden = false;
   }
 
   $('rows').addEventListener('click', (e) => {
+    const r = e.target.closest('[data-restock]'); if (r) return openRestock(r.dataset.restock);
     const h = e.target.closest('[data-hist]'); if (h) return openHist(h.dataset.hist);
     const ed = e.target.closest('[data-edit]'); if (ed) openEdit(ed.dataset.edit);
   });
@@ -2817,544 +2832,11 @@ BBViews['inventory/ingredients'] = function () {
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
 
-  // Refresh when stock changes in another tab (e.g. a customer pays)
-  window.addEventListener('storage', (e) => { if (e.key === 'bb_ingredients') render(); });
-  setInterval(render, 10000);
+  // Refresh when stock changes in another tab (e.g. a customer pays), unless a form is open
+  const anyOpen = () => [...document.querySelectorAll('.modal-back')].some(b => !b.hidden);
+  window.addEventListener('storage', (e) => { if (e.key === 'bb_ingredients' && !anyOpen()) render(); });
+  setInterval(() => { if (!anyOpen()) render(); }, 10000);
   render();
-})();
-};
-
-/* ===== inventory/alerts ===== */
-BBViews['inventory/alerts'] = function () {
-(function () {
-  const user = BBS.init(['inventory'], 'alerts');
-  if (!user) return;
-  const I = BB.inventory;
-  const D = BB_DATA;
-  const esc = BBC.esc;
-
-  function render() {
-    const list = I.ingredients();
-    const flagged = list.filter(i => I.level(i) !== 'ok');
-    const openPOs = I.purchaseOrders().filter(p => p.status === 'draft' || p.status === 'sent');
-    const onOrder = (ingId) => openPOs.find(p => p.items.some(x => x.ing === ingId));
-
-    // Menu items that can't be sold because of stock
-    const blocked = D.items.map(it => ({ it, short: I.shortFor(it) })).filter(x => x.short.length);
-
-    let html = '';
-    if (blocked.length) {
-      html += `<section class="impact">
-        <h2>${blocked.length} menu item(s) unavailable to customers</h2>
-        <div class="chips">${blocked.map(b => `<span class="chip">${esc(b.it.name)} · needs ${b.short.map(id => esc(I.ing(id).name)).join(', ')}</span>`).join('')}</div>
-        <span class="hint" style="color:var(--ink)">These show as Sold out on the customer menu and the POS until the stock is received.</span>
-      </section>`;
-    }
-
-    if (!flagged.length) {
-      html += `<div class="panel all-good"><h2>All stocked up</h2><p class="muted">No ingredient is at or below its reorder level.</p></div>`;
-      document.getElementById('body').innerHTML = html;
-      return;
-    }
-
-    // Group by supplier
-    const groups = {};
-    flagged.forEach(i => { (groups[i.supplier || 'none'] = groups[i.supplier || 'none'] || []).push(i); });
-
-    html += Object.keys(groups).map(sid => {
-      const sup = I.supplier(sid);
-      const items = groups[sid].sort((a, b) => a.stock / a.reorder - b.stock / b.reorder);
-      const needPO = items.filter(i => !onOrder(i.id));
-      const est = needPO.reduce((n, i) => n + i.reorderQty * i.cost, 0);
-      return `<section class="panel">
-        <div class="sup-head">
-          <div><h2>${sup ? esc(sup.name) : 'No supplier set'}</h2>
-            <small>${sup ? `${esc(sup.contact)} · ${esc(sup.phone)} · delivers in about ${sup.leadDays} day(s)` : 'Assign a supplier in Ingredients'}</small></div>
-          ${sup && needPO.length ? `<a class="btn btn-primary btn-sm" href="inventory.html?view=purchase-orders&supplier=${sid}&items=${needPO.map(i => i.id).join(',')}">Create purchase order · ${BB.peso(est, true)}</a>` : sup ? '<span class="chip chip-gcash">All on order</span>' : ''}
-        </div>
-        <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Ingredient</th><th>On hand</th><th class="r">Reorder at</th><th class="r">Suggested order</th><th class="r">Est. cost</th><th>Status</th></tr></thead>
-          <tbody>${items.map(i => {
-            const lv = I.level(i);
-            const po = onOrder(i.id);
-            const pct = Math.max(0, Math.min(100, i.stock / (i.reorder * 2 || 1) * 100));
-            return `<tr>
-              <td><b>${esc(i.name)}</b>${po ? `<small class="onorder">On order: ${po.poNo} (${po.status === 'draft' ? 'draft' : 'sent'})</small>` : ''}</td>
-              <td><div class="lvl"><span class="num">${I.fmt(i.stock, i.unit)}</span><span class="lvl-bar"><i class="${lv}" style="width:${pct}%"></i></span></div></td>
-              <td class="r num">${I.fmt(i.reorder, i.unit)}</td>
-              <td class="r num">${I.fmt(i.reorderQty, i.unit)}</td>
-              <td class="r num">${BB.peso(i.reorderQty * i.cost, true)}</td>
-              <td><span class="chip ${lv === 'out' ? 'chip-red' : 'chip-caramel'}">${lv === 'out' ? 'Out of stock' : 'Low'}</span></td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table></div>
-      </section>`;
-    }).join('');
-
-    document.getElementById('body').innerHTML = html;
-  }
-
-  window.addEventListener('storage', (e) => { if (e.key === 'bb_ingredients' || e.key === 'bb_purchaseOrders') render(); });
-  setInterval(render, 10000);
-  render();
-})();
-};
-
-/* ===== inventory/suppliers ===== */
-BBViews['inventory/suppliers'] = function () {
-(function () {
-  const user = BBS.init(['inventory'], 'suppliers');
-  if (!user) return;
-  const I = BB.inventory;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-
-  function render() {
-    const q = $('search').value.trim().toLowerCase();
-    const ings = I.ingredients();
-    const pos = I.purchaseOrders();
-    const list = I.suppliers().filter(s => {
-      if (!q) return true;
-      const supplies = ings.filter(i => i.supplier === s.id).map(i => i.name.toLowerCase()).join(' ');
-      return (s.name + ' ' + s.contact + ' ' + supplies).toLowerCase().includes(q);
-    });
-
-    $('sups').innerHTML = list.map(s => {
-      const supplies = ings.filter(i => i.supplier === s.id);
-      const open = pos.filter(p => p.supplier === s.id && (p.status === 'draft' || p.status === 'sent'));
-      const spent = pos.filter(p => p.supplier === s.id && p.status === 'received').reduce((n, p) => n + p.items.reduce((m, x) => m + (x.received != null ? x.received : x.qty) * x.cost, 0), 0);
-      const needs = supplies.filter(i => I.level(i) !== 'ok');
-      return `<article class="panel panel-pad sup">
-        <div class="sup-top"><h2>${esc(s.name)}</h2>${open.length ? `<span class="chip chip-gcash">${open.length} open PO</span>` : ''}</div>
-        <dl>
-          <dt>Contact</dt><dd>${esc(s.contact)}</dd>
-          <dt>Phone</dt><dd class="mono" style="font-size:.82rem">${esc(s.phone)}</dd>
-          <dt>Email</dt><dd>${esc(s.email)}</dd>
-          <dt>Address</dt><dd>${esc(s.address)}</dd>
-          <dt>Lead time</dt><dd>${s.leadDays} day(s) · ${esc(s.terms)}</dd>
-          <dt>Received</dt><dd>${BB.peso(spent, true)} in purchase orders</dd>
-        </dl>
-        <div><div class="hint" style="margin-bottom:4px">Supplies ${supplies.length} ingredient(s)</div>
-          <div class="supplies">${supplies.map(i => `<span class="chip ${I.level(i) === 'ok' ? '' : I.level(i)}">${esc(i.name)}</span>`).join('') || '<span class="muted">None assigned yet</span>'}</div></div>
-        <div class="sup-foot">
-          <a class="btn btn-primary btn-sm" href="inventory.html?view=purchase-orders&supplier=${s.id}${needs.length ? '&items=' + needs.map(i => i.id).join(',') : ''}">New purchase order${needs.length ? ` (${needs.length} low)` : ''}</a>
-          <button class="btn btn-ghost btn-sm" type="button" data-edit="${s.id}">Edit</button>
-        </div>
-      </article>`;
-    }).join('') || '<p class="muted">No suppliers match.</p>';
-  }
-
-  let editing = null;
-  function openEdit(id) {
-    editing = id ? I.supplier(id) : null;
-    $('eTitle').textContent = editing ? 'Edit supplier' : 'Add supplier';
-    $('eName').value = editing ? editing.name : '';
-    $('eContact').value = editing ? editing.contact : '';
-    $('ePhone').value = editing ? editing.phone : '';
-    $('eEmail').value = editing ? editing.email : '';
-    $('eAddress').value = editing ? editing.address : '';
-    $('eLead').value = editing ? editing.leadDays : 2;
-    $('eTerms').value = editing ? editing.terms : 'COD';
-    $('eErr').hidden = true;
-    $('editBack').hidden = false;
-    $('eName').focus();
-  }
-  $('addBtn').addEventListener('click', () => openEdit(null));
-  $('sups').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openEdit(b.dataset.edit); });
-
-  $('editForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const rec = {
-      name: $('eName').value.trim(), contact: $('eContact').value.trim(), phone: $('ePhone').value.trim(),
-      email: $('eEmail').value.trim(), address: $('eAddress').value.trim(),
-      leadDays: Math.max(0, parseInt($('eLead').value, 10) || 0), terms: $('eTerms').value
-    };
-    let err = '';
-    if (!rec.name) err = 'Enter the business name.';
-    else if (!rec.contact || !rec.phone) err = 'Enter a contact person and phone number.';
-    else if (rec.email && !/^\S+@\S+\.\S+$/.test(rec.email)) err = 'That email address doesn’t look right.';
-    if (err) { $('eErr').textContent = err; $('eErr').hidden = false; return; }
-
-    const list = I.suppliers();
-    if (editing) Object.assign(list.find(s => s.id === editing.id), rec);
-    else list.push(Object.assign({ id: 's' + Date.now().toString(36) }, rec));
-    I.saveSuppliers(list);
-    BB.audit.log(editing ? 'Edited supplier' : 'Added supplier', rec.name);
-    $('editBack').hidden = true;
-    BBC.toast('Saved ' + rec.name);
-    render();
-  });
-
-  document.querySelectorAll('.modal-back').forEach(back => {
-    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
-  });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
-  $('search').addEventListener('input', render);
-  render();
-})();
-};
-
-/* ===== inventory/purchase-orders ===== */
-BBViews['inventory/purchase-orders'] = function () {
-(function () {
-  const user = BBS.init(['inventory'], 'po');
-  if (!user) return;
-  const I = BB.inventory;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-  const p2 = (n) => BB.peso(n, true);
-  const STATUS = { draft: ['Draft', 'chip-muted'], sent: ['Sent', 'chip-gcash'], received: ['Received', 'chip-green'], cancelled: ['Cancelled', 'chip-red'] };
-  const dateOnly = (iso) => new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-  const poTotal = (po) => po.items.reduce((n, x) => n + (po.status === 'received' && x.received != null ? x.received : x.qty) * x.cost, 0);
-  const overdue = (po) => po.status === 'sent' && po.expectedAt && new Date(po.expectedAt) < new Date(new Date().toDateString());
-  let tab = 'open';
-
-  function render() {
-    const pos = I.purchaseOrders();
-    const open = pos.filter(p => p.status === 'draft' || p.status === 'sent');
-    const month = new Date().getMonth();
-    const receivedMonth = pos.filter(p => p.status === 'received' && new Date(p.receivedAt).getMonth() === month);
-    $('kpis').innerHTML = `
-      <div class="kpi"><small>Open orders</small><strong>${open.length}</strong></div>
-      <div class="kpi"><small>Value on order</small><strong>${p2(open.reduce((n, p) => n + poTotal(p), 0))}</strong></div>
-      <div class="kpi${pos.some(overdue) ? ' alert' : ''}"><small>Overdue deliveries</small><strong>${pos.filter(overdue).length}</strong></div>
-      <div class="kpi"><small>Received this month</small><strong>${p2(receivedMonth.reduce((n, p) => n + poTotal(p), 0))}</strong></div>`;
-
-    const tabs = [['open', 'Open', open.length], ['received', 'Received', pos.filter(p => p.status === 'received').length], ['cancelled', 'Cancelled', pos.filter(p => p.status === 'cancelled').length], ['all', 'All', pos.length]];
-    $('tabs').innerHTML = tabs.map(([id, l, n]) => `<button type="button" data-tab="${id}" class="${id === tab ? 'on' : ''}">${l}<span class="n">${n}</span></button>`).join('');
-
-    const rows = pos.filter(p => tab === 'all' || (tab === 'open' ? open.includes(p) : p.status === tab)).slice().reverse();
-    $('rows').innerHTML = rows.map(p => {
-      const sup = I.supplier(p.supplier);
-      const names = p.items.map(x => (I.ing(x.ing) || { name: x.ing }).name);
-      return `<tr>
-        <td><b class="mono">${p.poNo}</b><small>by ${esc(p.createdBy || '')}</small></td>
-        <td>${sup ? esc(sup.name) : '—'}</td>
-        <td>${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ` +${names.length - 3} more` : ''}</td>
-        <td>${dateOnly(p.createdAt)}</td>
-        <td>${p.expectedAt ? dateOnly(p.expectedAt) : '—'}${overdue(p) ? '<small style="color:var(--danger)">Overdue</small>' : ''}${p.receivedAt ? `<small>Received ${dateOnly(p.receivedAt)}</small>` : ''}</td>
-        <td class="r num">${p2(poTotal(p))}</td>
-        <td><span class="chip ${STATUS[p.status][1]}">${STATUS[p.status][0]}</span></td>
-        <td class="r"><button class="btn ${p.status === 'sent' ? 'btn-primary' : 'btn-ghost'} btn-sm" data-view="${p.id}">${p.status === 'sent' ? 'Receive' : 'View'}</button></td>
-      </tr>`;
-    }).join('') || `<tr><td colspan="8" class="empty-row">${tab === 'open' ? 'No open purchase orders. Low-stock alerts can create one for you.' : 'Nothing here yet.'}</td></tr>`;
-  }
-  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { tab = b.dataset.tab; render(); } });
-
-  // ---- New PO ----
-  $('nSupplier').innerHTML = I.suppliers().map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  function ingOptions(supplierId, selected) {
-    const ings = I.ingredients();
-    const mine = ings.filter(i => i.supplier === supplierId), other = ings.filter(i => i.supplier !== supplierId);
-    const opt = (i) => `<option value="${i.id}" ${i.id === selected ? 'selected' : ''}>${esc(i.name)}${I.level(i) !== 'ok' ? ' (low)' : ''}</option>`;
-    return `<optgroup label="From this supplier">${mine.map(opt).join('')}</optgroup><optgroup label="Other ingredients">${other.map(opt).join('')}</optgroup>`;
-  }
-  function lineRow(ingId, qty) {
-    const ing = I.ing(ingId) || I.ingredients()[0];
-    return `<tr>
-      <td><select class="input" data-f="ing">${ingOptions($('nSupplier').value, ing.id)}</select></td>
-      <td><div class="qty-cell"><input class="input" data-f="qty" type="number" min="0" step="any" value="${qty != null ? qty : ing.reorderQty}"><span data-f="unit">${ing.unit}</span></div></td>
-      <td class="cost-cell"><input class="input" data-f="cost" type="number" min="0" step="0.001" value="${ing.cost}"></td>
-      <td class="r num" data-f="amt"></td>
-      <td><button type="button" class="rm-line" aria-label="Remove line">×</button></td>
-    </tr>`;
-  }
-  function recalc() {
-    let total = 0;
-    $('nLines').querySelectorAll('tr').forEach(tr => {
-      const amt = (parseFloat(tr.querySelector('[data-f="qty"]').value) || 0) * (parseFloat(tr.querySelector('[data-f="cost"]').value) || 0);
-      tr.querySelector('[data-f="amt"]').textContent = p2(amt);
-      total += amt;
-    });
-    $('nTotal').textContent = p2(total);
-  }
-  function setExpected() {
-    const sup = I.supplier($('nSupplier').value);
-    const d = new Date(Date.now() + (sup ? sup.leadDays : 2) * 86400000);
-    $('nExpected').value = d.toISOString().slice(0, 10);
-  }
-  function openNew(supplierId, ingIds) {
-    $('nSupplier').value = supplierId || I.suppliers()[0].id;
-    setExpected();
-    const ids = ingIds && ingIds.length ? ingIds : I.ingredients().filter(i => i.supplier === $('nSupplier').value && I.level(i) !== 'ok').map(i => i.id);
-    const start = ids.length ? ids : [(I.ingredients().find(i => i.supplier === $('nSupplier').value) || I.ingredients()[0]).id];
-    $('nLines').innerHTML = start.map(id => lineRow(id)).join('');
-    $('nNotes').value = '';
-    $('nErr').hidden = true;
-    recalc();
-    $('newBack').hidden = false;
-  }
-  $('newBtn').addEventListener('click', () => openNew());
-  $('nSupplier').addEventListener('change', () => {
-    setExpected();
-    $('nLines').querySelectorAll('[data-f="ing"]').forEach(sel => { const v = sel.value; sel.innerHTML = ingOptions($('nSupplier').value, v); });
-  });
-  $('addLine').addEventListener('click', () => {
-    const first = I.ingredients().find(i => i.supplier === $('nSupplier').value) || I.ingredients()[0];
-    $('nLines').insertAdjacentHTML('beforeend', lineRow(first.id));
-    recalc();
-  });
-  $('nLines').addEventListener('change', (e) => {
-    if (e.target.dataset.f === 'ing') {
-      const ing = I.ing(e.target.value);
-      const tr = e.target.closest('tr');
-      tr.querySelector('[data-f="unit"]').textContent = ing.unit;
-      tr.querySelector('[data-f="cost"]').value = ing.cost;
-      tr.querySelector('[data-f="qty"]').value = ing.reorderQty;
-    }
-    recalc();
-  });
-  $('nLines').addEventListener('input', recalc);
-  $('nLines').addEventListener('click', (e) => { if (e.target.closest('.rm-line')) { e.target.closest('tr').remove(); recalc(); } });
-
-  $('newForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const status = (e.submitter && e.submitter.dataset.status) || 'draft';
-    const items = [...$('nLines').querySelectorAll('tr')].map(tr => ({
-      ing: tr.querySelector('[data-f="ing"]').value,
-      qty: parseFloat(tr.querySelector('[data-f="qty"]').value) || 0,
-      cost: parseFloat(tr.querySelector('[data-f="cost"]').value) || 0
-    }));
-    let err = '';
-    if (!items.length) err = 'Add at least one ingredient.';
-    else if (items.some(x => x.qty <= 0)) err = 'Every line needs a quantity greater than zero.';
-    else if (new Set(items.map(x => x.ing)).size !== items.length) err = 'The same ingredient is listed twice. Combine them into one line.';
-    else if (!$('nExpected').value) err = 'Choose an expected delivery date.';
-    if (err) { $('nErr').textContent = err; $('nErr').hidden = false; return; }
-
-    const po = {
-      id: 'po' + Date.now(), poNo: BB.nextNumber('PO'), supplier: $('nSupplier').value, status,
-      createdAt: new Date().toISOString(), expectedAt: new Date($('nExpected').value + 'T09:00').toISOString(),
-      createdBy: user.name, notes: $('nNotes').value.trim(), items
-    };
-    const list = I.purchaseOrders();
-    list.push(po);
-    I.savePOs(list);
-    BB.audit.log('Created purchase order', `${po.poNo} · ${I.supplier(po.supplier).name} · ${p2(poTotal(po))} · ${status}`);
-    $('newBack').hidden = true;
-    BBC.toast(`${po.poNo} ${status === 'sent' ? 'sent' : 'saved as draft'}`);
-    tab = 'open';
-    history.replaceState(null, '', location.pathname + '?view=purchase-orders');
-    render();
-  });
-
-  // ---- View / receive ----
-  let viewing = null;
-  function openView(id) {
-    viewing = I.purchaseOrders().find(p => p.id === id);
-    const p = viewing;
-    const sup = I.supplier(p.supplier);
-    const receiving = p.status === 'sent';
-    $('vTitle').textContent = `${p.poNo} · ${STATUS[p.status][0]}`;
-    $('vBody').innerHTML = `
-      <div class="po-meta">
-        <span>Supplier</span><span>${sup ? esc(sup.name) : '—'}</span>
-        <span>Contact</span><span>${sup ? esc(sup.contact + ' · ' + sup.phone) : '—'}</span>
-        <span>Created</span><span>${BB.dateTime(p.createdAt)}</span>
-        <span>Expected</span><span>${p.expectedAt ? dateOnly(p.expectedAt) : '—'}</span>
-        ${p.receivedAt ? `<span>Received</span><span>${BB.dateTime(p.receivedAt)}</span><span>By</span><span>${esc(p.receivedBy || '')}</span>` : ''}
-      </div>
-      ${p.notes ? `<p class="hint">Notes: ${esc(p.notes)}</p>` : ''}
-      ${receiving ? '<p class="hint">Check the delivery and enter what actually arrived. Stock goes up by the received quantity.</p>' : ''}
-      <div class="tbl-wrap" style="border:1px solid var(--line);border-radius:8px">
-        <table class="tbl lines-tbl"><thead><tr><th>Ingredient</th><th class="r">Ordered</th>${receiving || p.status === 'received' ? '<th>Received</th>' : ''}<th class="r">Unit cost</th><th class="r">Amount</th></tr></thead>
-        <tbody>${p.items.map((x, idx) => {
-          const ing = I.ing(x.ing) || { name: x.ing, unit: '' };
-          return `<tr><td>${esc(ing.name)}</td><td class="r num">${I.fmt(x.qty, ing.unit)}</td>
-            ${receiving ? `<td><div class="qty-cell"><input class="input" type="number" min="0" step="any" data-rcv="${idx}" value="${x.qty}" aria-label="Received ${esc(ing.name)}"><span>${ing.unit}</span></div></td>` : p.status === 'received' ? `<td class="num">${I.fmt(x.received != null ? x.received : x.qty, ing.unit)}</td>` : ''}
-            <td class="r mono" style="font-size:.82rem">₱${x.cost}</td><td class="r num">${p2((p.status === 'received' && x.received != null ? x.received : x.qty) * x.cost)}</td></tr>`;
-        }).join('')}</tbody></table>
-      </div>
-      <div class="po-total"><span>Total</span><span>${p2(poTotal(p))}</span></div>
-      <p class="err-msg" id="vErr" hidden></p>`;
-
-    const foot = ['<button type="button" class="btn btn-ghost" data-close>Close</button>'];
-    if (p.status === 'draft') foot.unshift('<button type="button" class="btn btn-danger" data-act="cancel">Cancel PO</button>'), foot.push('<button type="button" class="btn btn-primary" data-act="send">Mark as sent</button>');
-    if (p.status === 'sent') foot.unshift('<button type="button" class="btn btn-danger" data-act="cancel">Cancel PO</button>'), foot.push('<button type="submit" class="btn btn-primary">Receive into stock</button>');
-    $('vFoot').innerHTML = foot.join('');
-    $('viewBack').hidden = false;
-  }
-  $('rows').addEventListener('click', (e) => { const b = e.target.closest('[data-view]'); if (b) openView(b.dataset.view); });
-
-  function updatePO(patch) {
-    const list = I.purchaseOrders();
-    const p = list.find(x => x.id === viewing.id);
-    Object.assign(p, patch);
-    I.savePOs(list);
-    return p;
-  }
-  $('vFoot').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-act]'); if (!b) return;
-    if (b.dataset.act === 'send') { updatePO({ status: 'sent', sentAt: new Date().toISOString() }); BB.audit.log('Sent purchase order', viewing.poNo); BBC.toast(`${viewing.poNo} marked as sent`); }
-    if (b.dataset.act === 'cancel') {
-      if (b.dataset.confirm !== 'yes') { b.dataset.confirm = 'yes'; b.textContent = 'Click again to cancel PO'; return; }
-      updatePO({ status: 'cancelled' }); BB.audit.log('Cancelled purchase order', viewing.poNo); BBC.toast(`${viewing.poNo} cancelled`);
-    }
-    $('viewBack').hidden = true;
-    render();
-  });
-  $('viewForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (viewing.status !== 'sent') return;
-    const rcv = [...$('vBody').querySelectorAll('[data-rcv]')].map(inp => parseFloat(inp.value));
-    if (rcv.some(v => !(v >= 0))) { $('vErr').textContent = 'Enter the received quantity for every line (0 if it didn’t arrive).'; $('vErr').hidden = false; return; }
-    const items = viewing.items.map((x, i) => Object.assign({}, x, { received: rcv[i] }));
-    updatePO({ status: 'received', receivedAt: new Date().toISOString(), receivedBy: user.name, items });
-    // Stock in, and keep the latest cost per unit on the ingredient
-    items.forEach(x => {
-      if (x.received > 0) I.move(x.ing, x.received, 'PURCHASE', viewing.poNo, I.supplier(viewing.supplier).name);
-      const list = I.ingredients(); const ing = list.find(i => i.id === x.ing);
-      if (ing && x.cost) { ing.cost = x.cost; I.saveIngredients(list); }
-    });
-    const short = items.filter(x => x.received < x.qty).length;
-    BB.audit.log('Received purchase order', `${viewing.poNo}${short ? ` · ${short} line(s) short` : ''}`);
-    $('viewBack').hidden = true;
-    BBC.toast(`${viewing.poNo} received into stock`);
-    render();
-  });
-
-  document.querySelectorAll('.modal-back').forEach(back => {
-    back.addEventListener('click', (e) => { if (e.target === back || e.target.closest('[data-close]')) back.hidden = true; });
-  });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelectorAll('.modal-back').forEach(b => { b.hidden = true; }); });
-
-  render();
-  // Opened from Low-stock alerts or Suppliers: start a prefilled PO
-  const params = new URLSearchParams(location.search);
-  if (params.get('supplier')) openNew(params.get('supplier'), (params.get('items') || '').split(',').filter(id => I.ing(id)));
-})();
-};
-
-/* ===== inventory/wastage ===== */
-BBViews['inventory/wastage'] = function () {
-(function () {
-  const user = BBS.init(['inventory'], 'wastage');
-  if (!user) return;
-  const I = BB.inventory;
-  const D = BB_DATA;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-  const p2 = (n) => BB.peso(n, true);
-  let range = 'week';
-
-  // ---- Select options ----
-  function ingOptionsHtml() {
-    const cats = [...new Set(I.ingredients().map(i => i.cat))];
-    return cats.map(c => `<optgroup label="${esc(c)}">${I.ingredients().filter(i => i.cat === c).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
-  }
-  $('wIng').innerHTML = ingOptionsHtml();
-  $('cIng').innerHTML = ingOptionsHtml();
-  $('wItem').innerHTML = D.categories.map(c => `<optgroup label="${esc(c.name)}">${D.items.filter(i => i.cat === c.id).map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
-  $('wReason').innerHTML = D.wasteReasons.map(r => `<option>${esc(r)}</option>`).join('');
-
-  const kind = () => document.querySelector('input[name="wKind"]:checked').value;
-
-  // What the wastage would remove from stock
-  function wasteUsage() {
-    const qty = parseFloat($('wQty').value) || 0;
-    if (kind() === 'ing') return qty ? { [$('wIng').value]: qty } : {};
-    return qty ? I.usageForLine({ itemId: $('wItem').value, qty, options: [] }) : {};
-  }
-
-  function updateW() {
-    const isItem = kind() === 'item';
-    $('wIngWrap').hidden = isItem;
-    $('wItemWrap').hidden = !isItem;
-    $('wUnit').textContent = isItem ? 'pcs' : I.ing($('wIng').value).unit;
-    $('wQty').step = isItem ? '1' : 'any';
-    const use = wasteUsage();
-    const ids = Object.keys(use);
-    const cost = ids.reduce((n, id) => n + use[id] * I.ing(id).cost, 0);
-    $('wPreview').innerHTML = ids.length
-      ? ids.map(id => { const g = I.ing(id); return `<span>${esc(g.name)}: −${I.fmt(use[id], g.unit)} <span class="muted">(${I.fmt(g.stock, g.unit)} → ${I.fmt(g.stock - use[id], g.unit)})</span></span>`; }).join('') + `<span>Cost of wastage: <b>${p2(cost)}</b></span>`
-      : '<span class="muted">Enter a quantity to see the stock change and cost.</span>';
-  }
-  function updateC() {
-    const g = I.ing($('cIng').value);
-    $('cUnit').textContent = g.unit;
-    const v = $('cQty').value;
-    if (v === '') { $('cPreview').innerHTML = `<span>System stock: <b>${I.fmt(g.stock, g.unit)}</b></span>`; return; }
-    const diff = (parseFloat(v) || 0) - g.stock;
-    $('cPreview').innerHTML = `<span>System stock: <b>${I.fmt(g.stock, g.unit)}</b></span>
-      <span>Difference: <b class="${diff >= 0 ? 'var-pos' : 'var-neg'}">${diff >= 0 ? '+' : ''}${I.fmt(diff, g.unit)}</b> (${p2(Math.abs(diff) * g.cost)})</span>`;
-  }
-  $('wForm').addEventListener('input', updateW);
-  $('wForm').addEventListener('change', updateW);
-  $('cForm').addEventListener('input', updateC);
-  $('cForm').addEventListener('change', updateC);
-
-  $('wForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const use = wasteUsage();
-    const qty = parseFloat($('wQty').value) || 0;
-    if (!(qty > 0)) { $('wErr').textContent = 'Enter a quantity greater than zero.'; $('wErr').hidden = false; return; }
-    if (kind() === 'item' && !Number.isInteger(qty)) { $('wErr').textContent = 'Enter a whole number of menu items.'; $('wErr').hidden = false; return; }
-    $('wErr').hidden = true;
-    const reason = $('wReason').value, note = $('wNote').value.trim();
-    const item = kind() === 'item' ? D.items.find(i => i.id === $('wItem').value) : null;
-    const ref = item ? `${qty} × ${item.name}` : '';
-    Object.keys(use).forEach(id => I.move(id, -use[id], 'WASTAGE', ref, [reason, note].filter(Boolean).join(' · ')));
-    BB.audit.log('Logged wastage', `${item ? ref : I.fmt(qty, I.ing($('wIng').value).unit) + ' ' + I.ing($('wIng').value).name} · ${reason}`);
-    BBC.toast('Wastage recorded');
-    $('wQty').value = ''; $('wNote').value = '';
-    updateW(); updateC(); render();
-  });
-
-  $('cForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const v = $('cQty').value;
-    if (v === '' || !(parseFloat(v) >= 0)) { $('cErr').textContent = 'Enter the counted quantity (0 if there is none).'; $('cErr').hidden = false; return; }
-    $('cErr').hidden = true;
-    const g = I.ing($('cIng').value);
-    const diff = BB.round2(parseFloat(v) - g.stock);
-    if (diff === 0) { BBC.toast('Count matches the system. Nothing to change.'); return; }
-    I.move(g.id, diff, 'ADJUST', '', 'Physical count');
-    BB.audit.log('Stock count', `${g.name}: ${I.fmt(g.stock, g.unit)} → ${I.fmt(parseFloat(v), g.unit)}`);
-    BBC.toast(`${g.name} corrected by ${diff > 0 ? '+' : ''}${I.fmt(diff, g.unit)}`);
-    $('cQty').value = '';
-    updateC(); updateW(); render();
-  });
-
-  // ---- KPIs + history ----
-  function inRange(iso) {
-    const d = new Date(iso), now = new Date();
-    if (range === 'today') return d.toDateString() === now.toDateString();
-    if (range === 'week') return now - d < 7 * 86400000;
-    return true;
-  }
-  function render() {
-    const moves = I.movements().filter(m => m.type === 'WASTAGE' || m.type === 'ADJUST');
-    const week = moves.filter(m => Date.now() - new Date(m.at) < 7 * 86400000);
-    const wasteWeek = week.filter(m => m.type === 'WASTAGE');
-    const wasteCost = wasteWeek.reduce((n, m) => n + m.cost, 0);
-    const byIng = {};
-    wasteWeek.forEach(m => { byIng[m.ing] = (byIng[m.ing] || 0) + m.cost; });
-    const top = Object.keys(byIng).sort((a, b) => byIng[b] - byIng[a])[0];
-    const adjNet = week.filter(m => m.type === 'ADJUST').reduce((n, m) => n + (m.qty > 0 ? m.cost : -m.cost), 0);
-    $('kpis').innerHTML = `
-      <div class="kpi${wasteCost ? ' warn' : ''}"><small>Wastage cost (7 days)</small><strong>${p2(wasteCost)}</strong></div>
-      <div class="kpi"><small>Wastage entries (7 days)</small><strong>${wasteWeek.length}</strong></div>
-      <div class="kpi"><small>Most wasted (by cost)</small><strong style="font-size:1.05rem">${top ? esc(I.ing(top).name) : '—'}</strong></div>
-      <div class="kpi"><small>Count adjustments (7 days)</small><strong>${adjNet >= 0 ? '+' : '−'}${p2(Math.abs(adjNet))}</strong></div>`;
-
-    $('tabs').innerHTML = [['today', 'Today'], ['week', 'Last 7 days'], ['all', 'All']].map(([id, l]) => `<button type="button" data-r="${id}" class="${id === range ? 'on' : ''}">${l}</button>`).join('');
-    const rows = moves.filter(m => inRange(m.at)).reverse();
-    $('rows').innerHTML = rows.map(m => {
-      const g = I.ing(m.ing) || { name: m.ing, unit: '' };
-      return `<tr>
-        <td>${BB.dateTime(m.at)}</td>
-        <td><span class="chip ${m.type === 'WASTAGE' ? 'chip-red' : 'chip-gcash'}">${m.type === 'WASTAGE' ? 'Wastage' : 'Count'}</span></td>
-        <td>${esc(g.name)}${m.ref ? `<small>${esc(m.ref)}</small>` : ''}</td>
-        <td class="r num ${m.qty > 0 ? 'var-pos' : 'var-neg'}">${m.qty > 0 ? '+' : ''}${I.fmt(m.qty, g.unit)}</td>
-        <td class="r num">${p2(m.cost)}</td>
-        <td>${esc(m.note)}</td>
-        <td>${esc(m.user)}</td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="7" class="empty-row">No wastage or stock counts recorded in this period.</td></tr>';
-  }
-  $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { range = b.dataset.r; render(); } });
-
-  updateW(); updateC(); render();
 })();
 };
 
@@ -3439,13 +2921,11 @@ BBViews['admin/dashboard'] = function () {
     const kitchen = BB.orders.list().filter(o => ['paid', 'preparing'].includes(o.status)).length;
     const low = I.ingredients().filter(i => I.level(i) !== 'ok');
     const blocked = BB_DATA.items.filter(i => BB.menu.isSoldOut(i));
-    const openPO = I.purchaseOrders().filter(p => p.status === 'sent' || p.status === 'draft').length;
     $('attn').innerHTML = `
       <li><a href="cashier.html?view=orders"><span>Orders waiting for payment</span><span class="chip ${unpaid ? 'chip-red' : 'chip-green'}">${unpaid}</span></a></li>
       <li><a href="kitchen.html"><span>Orders in the kitchen</span><span class="chip chip-gcash">${kitchen}</span></a></li>
-      <li><a href="inventory.html?view=alerts"><span>Ingredients low or out${low.length ? `<small class="hint" style="display:block">${esc(low.slice(0, 4).map(i => i.name).join(', '))}${low.length > 4 ? '…' : ''}</small>` : ''}</span><span class="chip ${low.length ? 'chip-caramel' : 'chip-green'}">${low.length}</span></a></li>
-      <li><a href="admin.html?view=menu"><span>Menu items sold out${blocked.length ? `<small class="hint" style="display:block">${esc(blocked.map(i => i.name).join(', '))}</small>` : ''}</span><span class="chip ${blocked.length ? 'chip-red' : 'chip-green'}">${blocked.length}</span></a></li>
-      <li><a href="inventory.html?view=purchase-orders"><span>Open purchase orders</span><span class="chip chip-gcash">${openPO}</span></a></li>`;
+      <li><a href="inventory.html"><span>Ingredients low or out${low.length ? `<small class="hint" style="display:block">${esc(low.slice(0, 4).map(i => i.name).join(', '))}${low.length > 4 ? '…' : ''}</small>` : ''}</span><span class="chip ${low.length ? 'chip-caramel' : 'chip-green'}">${low.length}</span></a></li>
+      <li><a href="admin.html?view=menu"><span>Menu items sold out${blocked.length ? `<small class="hint" style="display:block">${esc(blocked.map(i => i.name).join(', '))}</small>` : ''}</span><span class="chip ${blocked.length ? 'chip-red' : 'chip-green'}">${blocked.length}</span></a></li>`;
 
     // Activity
     const feed = BB.audit.list().slice(-8).reverse();
@@ -3805,7 +3285,7 @@ BBViews['admin/users'] = function () {
       ['Point of sale and taking payments', 1, 1, 0, 0],
       ['Senior/PWD discounts, cancel and void orders', 1, 1, 0, 0],
       ['Kitchen display, mark items sold out', 1, 0, 1, 0],
-      ['Ingredients, suppliers, purchase orders, wastage', 1, 0, 0, 1],
+      ['Stock levels and restocking', 1, 0, 0, 1],
       ['Sales dashboard', 1, 0, 0, 0],
       ['Menu, prices and recipes', 1, 0, 0, 0],
       ['Users and audit logs', 1, 0, 0, 0]
@@ -3887,7 +3367,7 @@ BBViews['admin/audit'] = function () {
     const a = action.toLowerCase();
     if (/void|cancel|discount/.test(a)) return ['Needs review', 'risk'];
     if (/payment|counter order/.test(a)) return ['Sales', 'money'];
-    if (/stock|wastage|purchase|ingredient|supplier/.test(a)) return ['Inventory', 'stock'];
+    if (/stock|restock|ingredient/.test(a)) return ['Inventory', 'stock'];
     if (/preparing|ready|completed|recalled|sold out|available/.test(a)) return ['Kitchen', ''];
     if (/logged/.test(a)) return ['Login', ''];
     return ['Settings', 'admin'];
