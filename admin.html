@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<!-- Screens: admin.html · admin.html?view=menu · admin.html?view=recipes · admin.html?view=users · admin.html?view=audit -->
+<!-- Screens: admin.html · admin.html?view=menu · admin.html?view=users · admin.html?view=audit -->
 <body data-module="admin" class="m-staff">
 <template data-view="dashboard" data-default data-title="Dashboard · Brew &amp; Bite Café" data-body-class="staff">
 <div class="shell">
@@ -67,7 +67,7 @@
   <aside class="side" id="side"></aside>
   <div class="work">
     <header class="work-head">
-      <div><h1>Menu &amp; prices</h1><div class="sub">Changes show on the customer menu, POS and receipts right away</div></div>
+      <div><h1>Menu &amp; prices</h1><div class="sub">Each item lists the ingredients it uses; selling it deducts them from Stock</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" type="button" id="catsBtn">Categories</button><button class="btn btn-primary btn-sm" type="button" id="addBtn">+ Add item</button></div>
     </header>
     <div class="work-body">
@@ -77,7 +77,7 @@
           <input class="input" id="search" type="search" placeholder="Search items" style="max-width:220px" aria-label="Search items">
         </div>
         <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Item</th><th>Category</th><th class="r">Price</th><th>Options</th><th class="r">Recipe cost</th><th class="r">Margin</th><th>Availability</th><th></th></tr></thead>
+          <thead><tr><th>Item</th><th>Category</th><th class="r">Price</th><th>Options</th><th>Ingredients per serving</th><th>Availability</th><th></th></tr></thead>
           <tbody id="rows"></tbody>
         </table></div>
       </section>
@@ -87,7 +87,7 @@
 
 <!-- Item editor -->
 <div class="modal-back" id="itemBack" hidden>
-  <form class="modal" id="itemForm" role="dialog" aria-modal="true" aria-labelledby="iTitle" novalidate>
+  <form class="modal wide" id="itemForm" role="dialog" aria-modal="true" aria-labelledby="iTitle" novalidate>
     <div class="modal-head"><h2 id="iTitle"></h2><button type="button" class="x-btn" data-close aria-label="Close">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
@@ -100,7 +100,11 @@
         <div class="full"><div class="lbl" style="margin-bottom:6px">Labels on the menu</div>
           <div class="checks"><label><input type="checkbox" id="tBest"> Best seller</label><label><input type="checkbox" id="tNew"> New</label></div></div>
       </div>
-      <p class="hint" id="iRecipeHint"></p>
+      <div class="ing-block">
+        <div class="ing-head"><span class="lbl">Ingredients per serving</span><span class="hint">Deducted from Stock each time it sells</span></div>
+        <div class="ing-rows" id="iIngs"></div>
+        <div class="ing-foot"><button type="button" class="btn btn-ghost btn-sm" id="iAddIng">+ Add ingredient</button><span class="hint" id="iCupNote"></span></div>
+      </div>
       <p class="err-msg" id="iErr" hidden></p>
     </div>
     <div class="modal-foot">
@@ -121,43 +125,6 @@
       <p class="err-msg" id="cErr" hidden></p>
     </div>
   </form>
-</div>
-</template>
-
-<template data-view="recipes" data-title="Recipes &amp; Costing · Brew &amp; Bite Café" data-body-class="staff">
-<div class="shell">
-  <aside class="side" id="side"></aside>
-  <div class="work">
-    <header class="work-head">
-      <div><h1>Recipes &amp; costing</h1><div class="sub">What each item uses, so stock is deducted correctly and margins stay healthy</div></div>
-      <span class="clock" id="clock"></span>
-    </header>
-    <div class="work-body">
-      <div class="rc">
-        <aside class="panel ilist" id="ilist" aria-label="Menu items"></aside>
-        <div style="display:grid;gap:16px">
-          <form class="panel panel-pad" id="form" novalidate>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
-              <div><h2 id="title"></h2><div class="hint" id="sub"></div></div>
-              <a class="btn btn-ghost btn-sm" href="admin.html?view=menu">Edit price in Menu</a>
-            </div>
-            <div class="tbl-wrap" style="border:1px solid var(--line);border-radius:8px">
-              <table class="tbl lines"><thead><tr><th>Ingredient</th><th>Quantity (Medium / single)</th><th id="scaleHead">Scales with Large</th><th class="r">Cost</th><th></th></tr></thead><tbody id="lines"></tbody></table>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" type="button" id="addLine">+ Add ingredient</button><span class="hint" id="cupNote"></span></div>
-            <div class="cost-grid" id="costs"></div>
-            <p class="err-msg" id="err" hidden></p>
-            <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-ghost" type="button" id="revert">Undo changes</button><button class="btn btn-primary" type="submit">Save recipe</button></div>
-          </form>
-
-          <section class="panel">
-            <div class="panel-head"><h2>Add-on costing</h2><span class="hint">What each add-on uses and earns</span></div>
-            <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Add-on</th><th>Uses</th><th class="r">Charge</th><th class="r">Cost</th><th class="r">Margin</th></tr></thead><tbody id="addons"></tbody></table></div>
-          </section>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 </template>
 

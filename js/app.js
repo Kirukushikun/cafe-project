@@ -747,7 +747,6 @@
     { group: 'Admin', roles: ['admin'], links: [
       { id: 'dashboard', label: 'Dashboard', href: 'admin.html', built: true },
       { id: 'menu', label: 'Menu & prices', href: 'admin.html?view=menu', built: true },
-      { id: 'recipes', label: 'Recipes & costing', href: 'admin.html?view=recipes', built: true },
       { id: 'users', label: 'Users & roles', href: 'admin.html?view=users', built: true },
       { id: 'audit', label: 'Audit logs', href: 'admin.html?view=audit', built: true }
     ]}
@@ -988,7 +987,6 @@ BBViews['index/index'] = function () {
     { title: 'Admin', role: 'admin', who: 'Owner · laptop or phone', icon: icon.chart, screens: [
       { name: 'Sales dashboard', file: 'admin.html' },
       { name: 'Menu and prices', file: 'admin.html?view=menu' },
-      { name: 'Recipes and costing', file: 'admin.html?view=recipes' },
       { name: 'Users and roles', file: 'admin.html?view=users' },
       { name: 'Audit logs', file: 'admin.html?view=audit' }
     ]}
@@ -1194,7 +1192,7 @@ BBViews['login/login'] = function () {
     cashier: { pos: 'Point of sale', orders: 'Orders', payment: 'Take payment', receipt: 'Receipt' },
     kitchen: { display: 'Kitchen display' },
     inventory: { ingredients: 'Stock' },
-    admin: { dashboard: 'Dashboard', menu: 'Menu & prices', recipes: 'Recipes & costing', users: 'Users & roles', audit: 'Audit logs' }
+    admin: { dashboard: 'Dashboard', menu: 'Menu & prices', users: 'Users & roles', audit: 'Audit logs' }
   };
   const DEFAULT_VIEW = { cashier: 'pos', kitchen: 'display', inventory: 'ingredients', admin: 'dashboard' };
   function screenName(url) {
@@ -2948,8 +2946,8 @@ BBViews['admin/menu'] = function () {
   const esc = BBC.esc;
   let cat = 'all';
 
-  // Recipe cost of one Medium / single serving
-  const recipeCost = (item) => { const u = I.usageForLine({ itemId: item.id, qty: 1, options: [] }); return Object.keys(u).reduce((n, k) => n + u[k] * ((I.ing(k) || { cost: 0 }).cost), 0); };
+  // "Espresso beans 18 g · Fresh milk 180 ml"
+  const ingredientText = (item) => (D.recipes[item.id] || []).map(([id, q]) => { const g = I.ing(id); return g ? `${g.name} ${I.fmt(q, g.unit)}` : ''; }).filter(Boolean).join(' · ');
   const sizeGroup = (item) => (item.options || []).find(g => g.id === 'size');
 
   function availability(item) {
@@ -2964,9 +2962,8 @@ BBViews['admin/menu'] = function () {
     const q = $('search').value.trim().toLowerCase();
     const rows = D.items.filter(i => (cat === 'all' || i.cat === cat) && (!q || i.name.toLowerCase().includes(q)));
     $('rows').innerHTML = rows.map(i => {
-      const cost = recipeCost(i);
-      const margin = i.price ? (i.price - cost) / i.price * 100 : 0;
       const sg = sizeGroup(i);
+      const ings = ingredientText(i);
       const opts = (i.options || []).map(g => g.id === 'size' ? `Size (L +₱${g.choices[1].price})` : `${g.name} (${g.choices.length})`).join(' · ');
       const av = availability(i);
       const soldNow = BB.menu.isSoldOut(i);
@@ -2975,8 +2972,7 @@ BBViews['admin/menu'] = function () {
         <td>${esc((D.categories.find(c => c.id === i.cat) || { name: '—' }).name)}</td>
         <td class="r num price-cell"><b>${BB.peso(i.price)}</b>${sg ? `<small>Large ${BB.peso(i.price + sg.choices[1].price)}</small>` : ''}</td>
         <td><small style="color:var(--ink)">${esc(opts) || '<span class="muted">None</span>'}</small></td>
-        <td class="r num">${D.recipes[i.id] && D.recipes[i.id].length ? BB.peso(cost, true) : '<a href="admin.html?view=recipes&item=' + i.id + '">Add recipe</a>'}</td>
-        <td class="r num ${margin >= 65 ? 'margin-good' : 'margin-low'}">${D.recipes[i.id] ? margin.toFixed(0) + '%' : '—'}</td>
+        <td class="ing-cell">${ings ? `<small style="color:var(--ink)">${esc(ings)}</small>` : '<span class="chip chip-red">No ingredients</span>'}</td>
         <td><select class="input avail-sel" data-avail="${i.id}" aria-label="Availability of ${esc(i.name)}">
             <option value="auto" ${av === 'auto' ? 'selected' : ''}>Auto (by stock)</option>
             <option value="on" ${av === 'on' ? 'selected' : ''}>Always available</option>
@@ -2984,7 +2980,7 @@ BBViews['admin/menu'] = function () {
           </select><small class="${soldNow ? 'margin-low' : ''}">${soldNow ? 'Hidden from ordering' : 'On sale'}</small></td>
         <td class="r"><button class="btn btn-ghost btn-sm" data-edit="${i.id}">Edit</button></td>
       </tr>`;
-    }).join('') || '<tr><td colspan="8" class="empty-row">No items match.</td></tr>';
+    }).join('') || '<tr><td colspan="7" class="empty-row">No items match.</td></tr>';
   }
 
   $('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { cat = b.dataset.cat; render(); } });
@@ -3019,7 +3015,9 @@ BBViews['admin/menu'] = function () {
     $('iDelete').hidden = !editing;
     $('iDelete').dataset.confirm = '';
     $('iDelete').textContent = 'Remove from menu';
-    $('iRecipeHint').innerHTML = editing ? `Ingredients for this item are set in <a href="admin.html?view=recipes&item=${editing.id}">Recipes &amp; costing</a>.` : 'After saving, add the recipe in Recipes & costing so stock is deducted when it sells.';
+    $('iIngs').innerHTML = (editing ? D.recipes[editing.id] || [] : []).map(ingRow).join('');
+    if (!editing) $('iIngs').innerHTML = ingRow([I.ingredients()[0].id, '']);
+    updateCupNote();
     $('iErr').hidden = true;
     updateLargeVisibility();
     $('itemBack').hidden = false;
@@ -3031,6 +3029,39 @@ BBViews['admin/menu'] = function () {
     $('iLargeWrap').hidden = !tpl.groups.some(g => g.id === 'size');
   }
   $('iTpl').addEventListener('change', updateLargeVisibility);
+
+  // One row per ingredient: picker, quantity, unit. Existing "scales with Large" flags are kept as they are.
+  function ingOptions(sel) {
+    const cats = [...new Set(I.ingredients().map(i => i.cat))];
+    return cats.map(cg => `<optgroup label="${esc(cg)}">${I.ingredients().filter(i => i.cat === cg).map(i => `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</optgroup>`).join('');
+  }
+  function ingRow([id, qty, scales]) {
+    const g = I.ing(id) || I.ingredients()[0];
+    return `<div class="ing-row" data-scale="${scales ? 1 : 0}">
+      <select class="input" data-f="ing" aria-label="Ingredient">${ingOptions(g.id)}</select>
+      <span class="unit-input"><input class="input" data-f="qty" type="number" min="0" step="any" value="${qty}" aria-label="Quantity"><span data-f="unit">${g.unit}</span></span>
+      <button type="button" class="x-btn" data-f="rm" aria-label="Remove ingredient">×</button></div>`;
+  }
+  function readIngs() {
+    return [...$('iIngs').querySelectorAll('.ing-row')].map(r => {
+      const line = [r.querySelector('[data-f="ing"]').value, parseFloat(r.querySelector('[data-f="qty"]').value) || 0];
+      if (r.dataset.scale === '1') line.push(1);
+      return line;
+    });
+  }
+  function updateCupNote() {
+    $('iCupNote').textContent = D.drinkCats.includes($('iCat').value) ? 'A cup and lid are deducted automatically for drinks.' : '';
+  }
+  $('iCat').addEventListener('change', updateCupNote);
+  $('iAddIng').addEventListener('click', () => {
+    $('iIngs').insertAdjacentHTML('beforeend', ingRow([I.ingredients()[0].id, '']));
+    $('iIngs').lastElementChild.querySelector('[data-f="ing"]').focus();
+  });
+  $('iIngs').addEventListener('change', (e) => {
+    if (e.target.dataset.f !== 'ing') return;
+    e.target.closest('.ing-row').querySelector('[data-f="unit"]').textContent = I.ing(e.target.value).unit;
+  });
+  $('iIngs').addEventListener('click', (e) => { if (e.target.closest('[data-f="rm"]')) e.target.closest('.ing-row').remove(); });
   $('addBtn').addEventListener('click', () => openItem(null));
   $('rows').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (b) openItem(b.dataset.edit); });
 
@@ -3042,7 +3073,12 @@ BBViews['admin/menu'] = function () {
     else if (!(price > 0)) err = 'Enter a price greater than zero.';
     else if (!$('iLargeWrap').hidden && !(large >= 0)) err = 'Enter how much Large adds (0 if the same price).';
     else if (D.items.some(i => i.name.toLowerCase() === name.toLowerCase() && i !== editing)) err = `${name} is already on the menu.`;
+    const ings = readIngs();
+    if (!err && !ings.length) err = 'Add at least one ingredient so selling it deducts from Stock.';
+    else if (!err && ings.some(l => !(l[1] > 0))) err = 'Every ingredient needs a quantity greater than zero.';
+    else if (!err && new Set(ings.map(l => l[0])).size !== ings.length) err = 'An ingredient is listed twice. Combine them into one row.';
     if (err) { $('iErr').textContent = err; $('iErr').hidden = false; return; }
+    let itemId = editing ? editing.id : null;
 
     const items = JSON.parse(JSON.stringify(D.items));
     const tags = [$('tBest').checked && 'Best seller', $('tNew').checked && 'New'].filter(Boolean);
@@ -3060,10 +3096,12 @@ BBViews['admin/menu'] = function () {
       const sg = groups.find(g => g.id === 'size');
       if (sg) sg.choices[1].price = large;
       const tones = { coffee: ['#7A4A26', '#C99467'], noncoffee: ['#3F6B3A', '#A9C98A'], milktea: ['#9A7A4E', '#E3CFA6'], frappe: ['#3A2418', '#7F5641'], meals: ['#8A3B22', '#E09A63'], pastries: ['#B07A2E', '#F2D49B'] };
-      items.push({ id: name.toLowerCase().replace(/[^a-z0-9]+/g, '') + Date.now().toString(36).slice(-3), cat: $('iCat').value, name, price, desc: $('iDesc').value.trim(), tone: tones[$('iCat').value] || ['#4A5B50', '#A9B8AE'], tags, options: groups });
+      itemId = name.toLowerCase().replace(/[^a-z0-9]+/g, '') + Date.now().toString(36).slice(-3);
+      items.push({ id: itemId, cat: $('iCat').value, name, price, desc: $('iDesc').value.trim(), tone: tones[$('iCat').value] || ['#4A5B50', '#A9B8AE'], tags, options: groups });
       BB.audit.log('Added menu item', `${name} · ${BB.peso(price)}`);
     }
     BB.admin.save('items', items);
+    BB.admin.save('recipes', Object.assign({}, D.recipes, { [itemId]: ings }));
     $('itemBack').hidden = true;
     BBC.toast('Saved ' + name);
     render();
@@ -3073,6 +3111,8 @@ BBViews['admin/menu'] = function () {
     const b = $('iDelete');
     if (b.dataset.confirm !== 'yes') { b.dataset.confirm = 'yes'; b.textContent = 'Click again to remove'; return; }
     BB.admin.save('items', D.items.filter(i => i.id !== editing.id));
+    const recipes = Object.assign({}, D.recipes); delete recipes[editing.id];
+    BB.admin.save('recipes', recipes);
     BB.audit.log('Removed menu item', editing.name);
     $('itemBack').hidden = true;
     BBC.toast(`${editing.name} removed from the menu`);
@@ -3123,138 +3163,6 @@ BBViews['admin/menu'] = function () {
 })();
 };
 
-/* ===== admin/recipes ===== */
-BBViews['admin/recipes'] = function () {
-(function () {
-  const user = BBS.init(['admin'], 'recipes');
-  if (!user) return;
-  const D = BB_DATA, I = BB.inventory;
-  const $ = (id) => document.getElementById(id);
-  const esc = BBC.esc;
-  const p2 = (n) => BB.peso(n, true);
-  let current = new URLSearchParams(location.search).get('item') || D.items[0].id;
-
-  const isDrink = (it) => D.drinkCats.includes(it.cat);
-  const hasSize = (it) => (it.options || []).some(g => g.id === 'size');
-  function costOf(itemId, large) {
-    const u = I.usageForLine({ itemId, qty: 1, options: large ? [{ groupId: 'size', id: 'l' }] : [] });
-    return Object.keys(u).reduce((n, k) => n + u[k] * ((I.ing(k) || { cost: 0 }).cost), 0);
-  }
-
-  function renderList() {
-    $('ilist').innerHTML = D.categories.map(c => {
-      const items = D.items.filter(i => i.cat === c.id);
-      if (!items.length) return '';
-      return `<h4>${esc(c.name)}</h4>` + items.map(i => {
-        const has = (D.recipes[i.id] || []).length;
-        const m = has ? (i.price - costOf(i.id)) / i.price * 100 : null;
-        return `<button type="button" data-id="${i.id}" class="${i.id === current ? 'on' : ''}"><b>${esc(i.name)}</b><span class="m ${m == null ? 'bad' : m >= 65 ? 'good' : 'bad'}">${m == null ? 'No recipe' : m.toFixed(0) + '%'}</span><small>${BB.peso(i.price)} · cost ${has ? p2(costOf(i.id)) : '—'}</small></button>`;
-      }).join('');
-    }).join('');
-  }
-
-  function ingOptions(sel) {
-    const cats = [...new Set(I.ingredients().map(i => i.cat))];
-    return cats.map(c => `<optgroup label="${esc(c)}">${I.ingredients().filter(i => i.cat === c).map(i => `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(i.name)} (${i.unit})</option>`).join('')}</optgroup>`).join('');
-  }
-  function lineRow(r, sizeable) {
-    const g = I.ing(r[0]) || I.ingredients()[0];
-    return `<tr><td><select class="input" data-f="ing">${ingOptions(g.id)}</select></td>
-      <td><div class="q"><input class="input" data-f="qty" type="number" min="0" step="any" value="${r[1]}"><span data-f="unit">${g.unit}</span></div></td>
-      <td>${sizeable ? `<input type="checkbox" data-f="scale" ${r[2] ? 'checked' : ''} aria-label="Scales with Large" style="width:18px;height:18px;accent-color:var(--accent-strong)">` : '<span class="muted">—</span>'}</td>
-      <td class="r num" data-f="cost"></td><td><button type="button" class="rm" aria-label="Remove ingredient">×</button></td></tr>`;
-  }
-
-  function readLines() {
-    return [...$('lines').querySelectorAll('tr')].map(tr => {
-      const sc = tr.querySelector('[data-f="scale"]');
-      const r = [tr.querySelector('[data-f="ing"]').value, parseFloat(tr.querySelector('[data-f="qty"]').value) || 0];
-      if (sc && sc.checked) r.push(1);
-      return r;
-    });
-  }
-
-  function openItem(id) {
-    current = id;
-    const it = D.items.find(i => i.id === id);
-    if (!it) return;
-    history.replaceState(null, '', '?view=recipes&item=' + id);
-    $('title').textContent = it.name;
-    $('sub').textContent = `${(D.categories.find(c => c.id === it.cat) || { name: '' }).name} · ${BB.peso(it.price)}${hasSize(it) ? ` · Large ${BB.peso(it.price + it.options.find(g => g.id === 'size').choices[1].price)}` : ''}`;
-    $('scaleHead').hidden = !hasSize(it);
-    $('lines').innerHTML = (D.recipes[id] || []).map(r => lineRow(r, hasSize(it))).join('');
-    $('cupNote').textContent = isDrink(it) ? 'A 12 oz or 16 oz cup and a lid are added automatically for drinks.' : '';
-    $('err').hidden = true;
-    recalc();
-    renderList();
-  }
-
-  function recalc() {
-    const it = D.items.find(i => i.id === current);
-    const lines = readLines();
-    $('lines').querySelectorAll('tr').forEach((tr, idx) => {
-      const g = I.ing(lines[idx][0]);
-      tr.querySelector('[data-f="unit"]').textContent = g.unit;
-      tr.querySelector('[data-f="cost"]').textContent = p2(lines[idx][1] * g.cost);
-    });
-    // Cost from the edited lines (not saved yet)
-    const cost = (large) => {
-      let c = lines.reduce((n, r) => n + (r[2] && large ? r[1] * D.largeFactor : r[1]) * I.ing(r[0]).cost, 0);
-      if (isDrink(it)) c += I.ing(large ? 'cup16' : 'cup12').cost + I.ing('lid').cost;
-      return c;
-    };
-    const cell = (label, price, c) => { const m = (price - c) / price * 100; return `<div><small>${label}</small><strong>${p2(c)}</strong><span class="${m >= 65 ? 'good' : 'bad'}" style="font-size:.84rem">Food cost ${(c / price * 100).toFixed(1)}% · margin ${p2(price - c)}</span></div>`; };
-    let html = cell(hasSize(it) ? 'Medium cost' : 'Cost per serving', it.price, cost(false));
-    if (hasSize(it)) html += cell('Large cost', it.price + it.options.find(g => g.id === 'size').choices[1].price, cost(true));
-    else html += `<div><small>Price</small><strong>${BB.peso(it.price)}</strong><span class="hint">Aim for food cost under 35%</span></div>`;
-    $('costs').innerHTML = html;
-  }
-
-  $('ilist').addEventListener('click', (e) => { const b = e.target.closest('button[data-id]'); if (b) openItem(b.dataset.id); });
-  $('lines').addEventListener('input', recalc);
-  $('lines').addEventListener('change', recalc);
-  $('lines').addEventListener('click', (e) => { if (e.target.closest('.rm')) { e.target.closest('tr').remove(); recalc(); } });
-  $('addLine').addEventListener('click', () => {
-    const it = D.items.find(i => i.id === current);
-    $('lines').insertAdjacentHTML('beforeend', lineRow([I.ingredients()[0].id, 0, hasSize(it) ? 1 : 0], hasSize(it)));
-    recalc();
-  });
-  $('revert').addEventListener('click', () => openItem(current));
-
-  $('form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const lines = readLines();
-    let err = '';
-    if (!lines.length) err = 'Add at least one ingredient so stock is deducted when this item sells.';
-    else if (lines.some(r => !(r[1] > 0))) err = 'Every ingredient needs a quantity greater than zero.';
-    else if (new Set(lines.map(r => r[0])).size !== lines.length) err = 'An ingredient is listed twice. Combine them into one line.';
-    if (err) { $('err').textContent = err; $('err').hidden = false; return; }
-    const it = D.items.find(i => i.id === current);
-    const recipes = Object.assign({}, D.recipes, { [current]: lines });
-    BB.admin.save('recipes', recipes);
-    BB.audit.log('Updated recipe', `${it.name} · ${lines.length} ingredient(s) · cost ${p2(costOf(current))}`);
-    $('err').hidden = true;
-    BBC.toast('Recipe saved for ' + it.name);
-    renderList();
-  });
-
-  // Add-on costing (read-only)
-  const allChoices = {};
-  D.items.forEach(i => (i.options || []).forEach(g => g.choices.forEach(ch => { allChoices[g.id + ':' + ch.id] = ch; })));
-  $('addons').innerHTML = Object.keys(D.optionRecipes).map(key => {
-    const r = D.optionRecipes[key], ch = allChoices[key];
-    if (!ch) return '';
-    let uses, cost;
-    if (r.replace) { const g = I.ing(r.replace[1]); uses = `Replaces ${I.ing(r.replace[0]).name.toLowerCase()} with ${g.name.toLowerCase()}`; cost = 180 * (g.cost - I.ing(r.replace[0]).cost); }
-    else { uses = r.add.map(([id, q]) => `${I.fmt(q, I.ing(id).unit)} ${I.ing(id).name.toLowerCase()}`).join(', '); cost = r.add.reduce((n, [id, q]) => n + q * I.ing(id).cost, 0); }
-    const m = ch.price ? (ch.price - cost) / ch.price * 100 : 0;
-    return `<tr><td><b>${esc(ch.name)}</b></td><td>${esc(uses)}${r.replace ? '<small>Cost shown for 180 ml of milk</small>' : ''}</td><td class="r num">${BB.peso(ch.price)}</td><td class="r num">${p2(cost)}</td><td class="r num ${m >= 60 ? 'good' : 'bad'}">${m.toFixed(0)}%</td></tr>`;
-  }).join('');
-
-  openItem(D.items.some(i => i.id === current) ? current : D.items[0].id);
-})();
-};
-
 /* ===== admin/users ===== */
 BBViews['admin/users'] = function () {
 (function () {
@@ -3287,7 +3195,7 @@ BBViews['admin/users'] = function () {
       ['Kitchen display, mark items sold out', 1, 0, 1, 0],
       ['Stock levels and restocking', 1, 0, 0, 1],
       ['Sales dashboard', 1, 0, 0, 0],
-      ['Menu, prices and recipes', 1, 0, 0, 0],
+      ['Menu, prices and ingredients', 1, 0, 0, 0],
       ['Users and audit logs', 1, 0, 0, 0]
     ];
     const count = (r) => D.users.filter(u => u.role === r && u.active !== false).length;
